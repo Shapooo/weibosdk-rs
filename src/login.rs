@@ -4,7 +4,9 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+
 use super::client::WeiboClient;
+use super::internal::User;
 
 const SEND_CODE_URL: &str = "https://api.weibo.cn/2/account/login_sendcode";
 const LOGIN_URL: &str = "https://api.weibo.cn/2/account/login";
@@ -43,7 +45,6 @@ struct SendCodePayload<'a> {
 pub struct SendCodeResponse {
     pub msg: String,
     pub code: String,
-    // 根据实际的响应体添加更多字段
 }
 
 pub struct SendCode {
@@ -85,13 +86,12 @@ impl SendCodeAPI for SendCode {
             .header("Accept-Encoding", "gzip")
             .form(&payload)
             .send()
-            .await?
-            .json::<SendCodeResponse>()
             .await?;
+
+        let send_code_response = response.json::<SendCodeResponse>().await?;
 
         Ok(WaitingLogin {
             client: self.client,
-            send_code_response: response,
         })
     }
 }
@@ -113,16 +113,13 @@ struct LoginPayload<'a> {
 
 #[derive(Debug, Deserialize)]
 pub struct LoginResponse {
-    pub msg: String,
-    pub code: String,
-    pub gsid: Option<String>,
-    pub userinfo: Option<HashMap<String, serde_json::Value>>,
-    // 根据实际的响应体添加更多字段
+    pub gsid: String,
+    pub uid: String,
+    pub user: User,
 }
 
 pub struct WaitingLogin {
     client: Client,
-    send_code_response: SendCodeResponse,
 }
 
 impl LoginAPI for WaitingLogin {
@@ -138,7 +135,7 @@ impl LoginAPI for WaitingLogin {
             smscode: sms_code,
         };
 
-        let login_response = self
+        let response = self
             .client
             .post(LOGIN_URL)
             .header("User-Agent", "HONOR-PGT-AN10_9_WeiboIntlAndroid_6710")

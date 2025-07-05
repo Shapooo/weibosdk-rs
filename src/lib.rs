@@ -1,6 +1,11 @@
 pub mod client;
 pub mod favorite;
 pub mod login;
+pub mod user;
+
+mod internal;
+
+pub use user::User;
 
 // const WEIBO_DOMAIN: &str = "https://api.weibo.cn";
 // const API_ACCOUNT_AVATAR: &str = "/2/account/avatar/upload.json";
