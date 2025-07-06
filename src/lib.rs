@@ -4,6 +4,7 @@ pub mod login;
 pub mod user;
 
 mod internal;
+mod utils;
 
 pub use user::User;
 
