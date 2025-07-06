@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
+use crate::login::SendCode;
 
 //-------------------------------------------------------------
 //---------------------- WeiboClient --------------------------
@@ -39,6 +40,10 @@ impl WeiboAPI {
         api.client = client;
         Ok(api)
     }
+
+    pub fn start_login(&self) -> SendCode {
+        SendCode::new(self.client.clone())
+    }
 }
 
 #[cfg(test)]
@@ -69,5 +74,20 @@ mod tests {
         assert_eq!(api.screen_name, loaded_api.screen_name);
 
         let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn test_start_login() {
+        let client = Client::new();
+        let api = WeiboAPI::new(
+            client,
+            "test_gsid".to_string(),
+            "test_uid".to_string(),
+            "test_screen_name".to_string(),
+        );
+        let send_code = api.start_login();
+        // The test mainly checks that the method can be called and returns the correct type.
+        // Further testing of SendCode functionality should be in the login module's tests.
+        assert!(matches!(send_code, SendCode { .. }));
     }
 }
