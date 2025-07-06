@@ -1,11 +1,14 @@
 #![allow(async_fn_in_trait)]
 use anyhow::Result;
 use log::debug;
-use reqwest::Client;
+use reqwest::{
+    Client,
+    header::{self, HeaderMap, HeaderValue},
+};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use super::client::WeiboClient;
+use super::weibo_api::WeiboAPI;
 
 const SEND_CODE_URL: &str = "https://api.weibo.cn/2/account/login_sendcode";
 const LOGIN_URL: &str = "https://api.weibo.cn/2/account/login";
@@ -40,6 +43,7 @@ struct SendCodePayload<'a> {
     phone: &'a str,
 }
 
+#[allow(unused)]
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
 enum SendCodeResponse {
@@ -60,9 +64,21 @@ pub struct SendCode {
 
 impl SendCode {
     pub fn new() -> Self {
-        SendCode {
-            client: Client::new(),
-        }
+        let headers = HeaderMap::from_iter([
+            (
+                header::USER_AGENT,
+                HeaderValue::from_static("HONOR-PGT-AN10_9_WeiboIntlAndroid_6710"),
+            ),
+            (header::ACCEPT_ENCODING, HeaderValue::from_static("gzip")),
+            (
+                header::CONTENT_TYPE,
+                HeaderValue::from_static("application/x-www-form-urlencoded; charset=UTF-8"),
+            ),
+            (header::HOST, HeaderValue::from_static("api.weibo.cn")),
+            (header::CONNECTION, HeaderValue::from_static("Keep-Alive")),
+        ]);
+        let client = Client::builder().default_headers(headers).build().unwrap();
+        Self { client }
     }
 }
 
@@ -79,18 +95,9 @@ impl SendCodeAPI for SendCode {
             ua: "HONOR-PGT-AN10_9_WeiboIntlAndroid_6710",
             phone: &phone_number,
         };
-
         let response: reqwest::Response = self
             .client
             .post(SEND_CODE_URL)
-            .header("User-Agent", "HONOR-PGT-AN10_9_WeiboIntlAndroid_6710")
-            .header(
-                "Content-Type",
-                "application/x-www-form-urlencoded; charset=UTF-8",
-            )
-            .header("Host", "api.weibo.cn")
-            .header("Connection", "Keep-Alive")
-            .header("Accept-Encoding", "gzip")
             .form(&payload)
             .send()
             .await?;
@@ -139,7 +146,7 @@ pub struct WaitingLogin {
 }
 
 impl LoginAPI for WaitingLogin {
-    type WeiboClient = WeiboClient;
+    type WeiboClient = WeiboAPI;
     async fn login(self, sms_code: &str) -> Result<Self::WeiboClient> {
         let payload = LoginPayload {
             c: "weicoabroad",
@@ -151,24 +158,11 @@ impl LoginAPI for WaitingLogin {
             smscode: sms_code,
         };
 
-        let response = self
-            .client
-            .post(LOGIN_URL)
-            .header("User-Agent", "HONOR-PGT-AN10_9_WeiboIntlAndroid_6710")
-            .header(
-                "Content-Type",
-                "application/x-www-form-urlencoded; charset=UTF-8",
-            )
-            .header("Host", "api.weibo.cn")
-            .header("Connection", "Keep-Alive")
-            .header("Accept-Encoding", "gzip")
-            .form(&payload)
-            .send()
-            .await?;
+        let response = self.client.post(LOGIN_URL).form(&payload).send().await?;
 
         let login_response = response.json::<LoginResponse>().await?;
         debug!("{:?}", login_response);
 
-        Ok(WeiboClient::new(self.client, login_response))
+        Ok(WeiboAPI::new(self.client, login_response))
     }
 }
