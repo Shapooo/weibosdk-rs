@@ -7,14 +7,14 @@ use super::login::LoginResponse;
 //-------------------------------------------------------------
 
 #[derive(Debug)]
-pub struct WeiboClient {
+pub struct WeiboAPI {
     client: Client,
     login_response: LoginResponse,
 }
 
-impl WeiboClient {
+impl WeiboAPI {
     pub fn new(client: Client, login_response: LoginResponse) -> Self {
-        WeiboClient {
+        WeiboAPI {
             client,
             login_response,
         }

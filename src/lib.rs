@@ -1,7 +1,7 @@
-pub mod client;
 pub mod favorite;
 pub mod login;
 pub mod user;
+pub mod weibo_api;
 
 mod internal;
 mod utils;
