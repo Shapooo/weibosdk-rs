@@ -1,6 +1,7 @@
+#![allow(async_fn_in_trait)]
 use anyhow::Result;
 use bytes::Bytes;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 
 pub trait HttpResponse: Send + Sync + 'static {
     async fn json<T: DeserializeOwned>(self) -> Result<T>;
@@ -22,14 +23,22 @@ impl HttpResponse for reqwest::Response {
     }
 }
 
-pub trait HttpClient: Send + Sync + 'static {
+pub trait HttpClient: Send + Sync + Clone + 'static {
     type Response: HttpResponse;
-    async fn post(&self, url: &str, form: &(impl Serialize + Send + Sync)) -> Result<Self::Response>;
+    async fn post(
+        &self,
+        url: &str,
+        form: &(impl Serialize + Send + Sync),
+    ) -> Result<Self::Response>;
 }
 
 impl HttpClient for reqwest::Client {
     type Response = reqwest::Response;
-    async fn post(&self, url: &str, form: &(impl Serialize + Send + Sync)) -> Result<Self::Response> {
+    async fn post(
+        &self,
+        url: &str,
+        form: &(impl Serialize + Send + Sync),
+    ) -> Result<Self::Response> {
         Ok(self.post(url).form(form).send().await?)
     }
 }
@@ -39,8 +48,8 @@ mod tests {
     use super::*;
     use serde::{Deserialize, Serialize};
     use wiremock::{
-        matchers::{method, path},
         Mock, MockServer, ResponseTemplate,
+        matchers::{method, path},
     };
 
     #[derive(Deserialize, Serialize, PartialEq, Debug)]

@@ -1,14 +1,11 @@
 #![allow(async_fn_in_trait)]
 use anyhow::Result;
 use log::debug;
-use reqwest::{
-    Client,
-    header::{self, HeaderMap, HeaderValue},
-};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::weibo_api::WeiboAPI;
+use crate::client::{HttpClient, HttpResponse};
 
 const SEND_CODE_URL: &str = "https://api.weibo.cn/2/account/login_sendcode";
 const LOGIN_URL: &str = "https://api.weibo.cn/2/account/login";
@@ -17,12 +14,12 @@ const LOGIN_URL: &str = "https://api.weibo.cn/2/account/login";
 //------------------------ Traits -----------------------------
 //-------------------------------------------------------------
 
-pub trait SendCodeAPI {
-    type Login: LoginAPI;
+pub trait SendCodeAPI<C: HttpClient> {
+    type Login: LoginAPI<C>;
     async fn get_send_code(self, phone_number: String) -> Result<Self::Login>;
 }
 
-pub trait LoginAPI {
+pub trait LoginAPI<C: HttpClient> {
     type WeiboClient;
     async fn login(self, sms_code: &str) -> Result<Self::WeiboClient>;
 }
@@ -58,18 +55,18 @@ enum SendCodeResponse {
     },
 }
 
-pub struct SendCode {
-    client: Client,
+pub struct SendCode<C: HttpClient> {
+    client: C,
 }
 
-impl SendCode {
-    pub fn new(client: Client) -> Self {
+impl<C: HttpClient> SendCode<C> {
+    pub fn new(client: C) -> Self {
         Self { client }
     }
 }
 
-impl SendCodeAPI for SendCode {
-    type Login = WaitingLogin;
+impl<C: HttpClient> SendCodeAPI<C> for SendCode<C> {
+    type Login = WaitingLogin<C>;
     async fn get_send_code(self, phone_number: String) -> Result<Self::Login> {
         let payload = SendCodePayload {
             c: "weicoabroad",
@@ -81,16 +78,9 @@ impl SendCodeAPI for SendCode {
             ua: "HONOR-PGT-AN10_9_WeiboIntlAndroid_6710",
             phone: &phone_number,
         };
-        let response: reqwest::Response = self
-            .client
-            .post(SEND_CODE_URL)
-            .form(&payload)
-            .send()
-            .await?;
+        let response = self.client.post(SEND_CODE_URL, &payload).await?;
 
-        let headers = response.headers();
-        debug!("{:?}", headers);
-        let send_code_response = response.json::<Value>().await.unwrap();
+        let send_code_response = response.json::<Value>().await?;
         debug!("{:?}", send_code_response);
         debug!(
             "{:?}",
@@ -126,13 +116,13 @@ pub struct LoginResponse {
     pub screen_name: String,
 }
 
-pub struct WaitingLogin {
+pub struct WaitingLogin<C: HttpClient> {
     phone_number: String,
-    client: Client,
+    client: C,
 }
 
-impl LoginAPI for WaitingLogin {
-    type WeiboClient = WeiboAPI;
+impl<C: HttpClient> LoginAPI<C> for WaitingLogin<C> {
+    type WeiboClient = WeiboAPI<C>;
     async fn login(self, sms_code: &str) -> Result<Self::WeiboClient> {
         let payload = LoginPayload {
             c: "weicoabroad",
@@ -144,7 +134,7 @@ impl LoginAPI for WaitingLogin {
             smscode: sms_code,
         };
 
-        let response = self.client.post(LOGIN_URL).form(&payload).send().await?;
+        let response = self.client.post(LOGIN_URL, &payload).await?;
 
         let response = response.json::<LoginResponse>().await?;
         debug!("{:?}", response);

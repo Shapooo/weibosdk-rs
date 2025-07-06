@@ -1,12 +1,13 @@
 #![allow(async_fn_in_trait)]
+use crate::client::HttpClient;
 use crate::weibo_api::WeiboAPI;
 
-pub trait FavoriteAPI {
+pub trait FavoriteAPI<C: HttpClient> {
     async fn favorites() -> ();
     async fn favorites_create() -> ();
 }
 
-impl FavoriteAPI for WeiboAPI {
+impl<C: HttpClient> FavoriteAPI<C> for WeiboAPI<C> {
     async fn favorites() -> () {
         todo!()
     }
