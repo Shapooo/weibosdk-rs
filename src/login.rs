@@ -1,33 +1,32 @@
 #![allow(async_fn_in_trait)]
 use anyhow::Result;
+use log::debug;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-
+use serde_json::Value;
 
 use super::client::WeiboClient;
-use super::internal::User;
 
 const SEND_CODE_URL: &str = "https://api.weibo.cn/2/account/login_sendcode";
 const LOGIN_URL: &str = "https://api.weibo.cn/2/account/login";
 
-///////////////////////////////////////////////////////////////
-////////////////////////// Traits /////////////////////////////
-///////////////////////////////////////////////////////////////
+//-------------------------------------------------------------
+//------------------------ Traits -----------------------------
+//-------------------------------------------------------------
 
 pub trait SendCodeAPI {
     type Login: LoginAPI;
-    async fn get_send_code(self, pn: &str) -> Result<Self::Login>;
+    async fn get_send_code(self, phone_number: String) -> Result<Self::Login>;
 }
 
 pub trait LoginAPI {
     type WeiboClient;
-    async fn login(self, pn: &str, sms_code: &str) -> Result<Self::WeiboClient>;
+    async fn login(self, sms_code: &str) -> Result<Self::WeiboClient>;
 }
 
-///////////////////////////////////////////////////////////////
-///////////////////////// SendCode ////////////////////////////
-///////////////////////////////////////////////////////////////
+//-------------------------------------------------------------
+//----------------------- SendCode ----------------------------
+//-------------------------------------------------------------
 
 #[derive(Debug, Serialize)]
 struct SendCodePayload<'a> {
@@ -42,9 +41,17 @@ struct SendCodePayload<'a> {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct SendCodeResponse {
-    pub msg: String,
-    pub code: String,
+#[serde(untagged)]
+enum SendCodeResponse {
+    Succ {
+        msg: String,
+    },
+    Fail {
+        errmsg: String,
+        errno: i32,
+        errtype: String,
+        isblock: bool,
+    },
 }
 
 pub struct SendCode {
@@ -61,7 +68,7 @@ impl SendCode {
 
 impl SendCodeAPI for SendCode {
     type Login = WaitingLogin;
-    async fn get_send_code(self, phone_number: &str) -> Result<Self::Login> {
+    async fn get_send_code(self, phone_number: String) -> Result<Self::Login> {
         let payload = SendCodePayload {
             c: "weicoabroad",
             from: "12DC195010",
@@ -70,10 +77,10 @@ impl SendCodeAPI for SendCode {
             locale: "zh_CN",
             wm: "2468_1001",
             ua: "HONOR-PGT-AN10_9_WeiboIntlAndroid_6710",
-            phone: phone_number,
+            phone: &phone_number,
         };
 
-        let response = self
+        let response: reqwest::Response = self
             .client
             .post(SEND_CODE_URL)
             .header("User-Agent", "HONOR-PGT-AN10_9_WeiboIntlAndroid_6710")
@@ -88,17 +95,25 @@ impl SendCodeAPI for SendCode {
             .send()
             .await?;
 
-        let send_code_response = response.json::<SendCodeResponse>().await?;
+        let headers = response.headers();
+        debug!("{:?}", headers);
+        let send_code_response = response.json::<Value>().await.unwrap();
+        debug!("{:?}", send_code_response);
+        debug!(
+            "{:?}",
+            serde_json::from_value::<SendCodeResponse>(send_code_response).unwrap()
+        );
 
         Ok(WaitingLogin {
             client: self.client,
+            phone_number,
         })
     }
 }
 
-///////////////////////////////////////////////////////////////
-/////////////////////////// Login /////////////////////////////
-///////////////////////////////////////////////////////////////
+//-------------------------------------------------------------
+//------------------------- Login------------------------------
+//-------------------------------------------------------------
 
 #[derive(Debug, Serialize)]
 struct LoginPayload<'a> {
@@ -115,23 +130,24 @@ struct LoginPayload<'a> {
 pub struct LoginResponse {
     pub gsid: String,
     pub uid: String,
-    pub user: User,
+    pub screen_name: String,
 }
 
 pub struct WaitingLogin {
+    phone_number: String,
     client: Client,
 }
 
 impl LoginAPI for WaitingLogin {
     type WeiboClient = WeiboClient;
-    async fn login(self, phone_number: &str, sms_code: &str) -> Result<Self::WeiboClient> {
+    async fn login(self, sms_code: &str) -> Result<Self::WeiboClient> {
         let payload = LoginPayload {
             c: "weicoabroad",
             lang: "zh_CN",
             getuser: "1",
             getoauth: "1",
             getcookie: "1",
-            phone: phone_number,
+            phone: &self.phone_number,
             smscode: sms_code,
         };
 
@@ -148,9 +164,10 @@ impl LoginAPI for WaitingLogin {
             .header("Accept-Encoding", "gzip")
             .form(&payload)
             .send()
-            .await?
-            .json::<LoginResponse>()
             .await?;
+
+        let login_response = response.json::<LoginResponse>().await?;
+        debug!("{:?}", login_response);
 
         Ok(WeiboClient::new(self.client, login_response))
     }
