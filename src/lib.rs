@@ -1,3 +1,4 @@
+pub mod client;
 pub mod favorite;
 pub mod login;
 pub mod user;

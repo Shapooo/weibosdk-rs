@@ -16,3 +16,4 @@ tokio = { version = "1.38.0", features = ["rt", "macros"] }
 
 [dev-dependencies]
 simple_logger = "5.0.0"
+wiremock = "0.6.0"
