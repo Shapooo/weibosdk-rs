@@ -160,9 +160,14 @@ impl LoginAPI for WaitingLogin {
 
         let response = self.client.post(LOGIN_URL).form(&payload).send().await?;
 
-        let login_response = response.json::<LoginResponse>().await?;
-        debug!("{:?}", login_response);
+        let response = response.json::<LoginResponse>().await?;
+        debug!("{:?}", response);
 
-        Ok(WeiboAPI::new(self.client, login_response))
+        Ok(WeiboAPI::new(
+            self.client,
+            response.gsid,
+            response.uid,
+            response.screen_name,
+        ))
     }
 }
