@@ -1,6 +1,7 @@
 pub mod client;
 pub mod favorite;
 pub mod login;
+pub mod session;
 pub mod user;
 pub mod weibo_api;
 
