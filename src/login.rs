@@ -89,7 +89,7 @@ impl<C: HttpClient> SendCode<C> {
 //-------------------------------------------------------------
 
 #[derive(Debug, Serialize)]
-struct LoginPayload<'a> {
+struct SMSLoginPayload<'a> {
     c: &'a str,
     lang: &'a str,
     getuser: &'a str,
@@ -100,7 +100,7 @@ struct LoginPayload<'a> {
 }
 
 #[derive(Debug, Serialize)]
-struct LoginWithGsidPayload<'a> {
+struct SessionRefreshPayload<'a> {
     c: &'a str,
     lang: &'a str,
     getuser: &'a str,
@@ -110,6 +110,28 @@ struct LoginWithGsidPayload<'a> {
     gsid: &'a str,
     uid: &'a str,
     s: &'a str,
+}
+
+async fn execute_login<C: HttpClient, P: Serialize + Send + Sync>(
+    client: &C,
+    payload: &P,
+) -> std::result::Result<Session, LoginError> {
+    let response = client
+        .post(LOGIN_URL, payload)
+        .await
+        .map_err(|e| LoginError::NetworkError(e.into()))?;
+
+    let response = response
+        .json::<LoginResponse>()
+        .await
+        .map_err(|e| LoginError::NetworkError(e.into()))?;
+    debug!("{:?}", response);
+
+    Ok(Session {
+        gsid: response.gsid,
+        uid: response.uid,
+        screen_name: response.screen_name,
+    })
 }
 
 #[derive(Debug, Deserialize)]
@@ -126,7 +148,7 @@ pub struct WaitingLogin<C: HttpClient> {
 
 impl<C: HttpClient> WaitingLogin<C> {
     pub async fn login(self, sms_code: &str) -> std::result::Result<Session, LoginError> {
-        let payload = LoginPayload {
+        let payload = SMSLoginPayload {
             c: "weicoabroad",
             lang: "zh_CN",
             getuser: "1",
@@ -135,24 +157,7 @@ impl<C: HttpClient> WaitingLogin<C> {
             phone: &self.phone_number,
             smscode: sms_code,
         };
-
-        let response = self
-            .client
-            .post(LOGIN_URL, &payload)
-            .await
-            .map_err(|e| LoginError::NetworkError(e.into()))?;
-
-        let response = response
-            .json::<LoginResponse>()
-            .await
-            .map_err(|e| LoginError::NetworkError(e.into()))?;
-        debug!("{:?}", response);
-
-        Ok(Session {
-            gsid: response.gsid,
-            uid: response.uid,
-            screen_name: response.screen_name,
-        })
+        execute_login(&self.client, &payload).await
     }
 }
 
@@ -169,7 +174,7 @@ impl<C: HttpClient> Login<C> {
         &self,
         session: Session,
     ) -> std::result::Result<Session, LoginError> {
-        let payload = LoginWithGsidPayload {
+        let payload = SessionRefreshPayload {
             c: "weicoabroad",
             lang: "zh_CN",
             getuser: "1",
@@ -180,24 +185,7 @@ impl<C: HttpClient> Login<C> {
             from: LOGIN_FROM,
             s: &crate::utils::generate_s(&session.uid, LOGIN_FROM),
         };
-
-        let response = self
-            .client
-            .post(LOGIN_URL, &payload)
-            .await
-            .map_err(|e| LoginError::NetworkError(e.into()))?;
-
-        let response = response
-            .json::<LoginResponse>()
-            .await
-            .map_err(|e| LoginError::NetworkError(e.into()))?;
-        debug!("{:?}", response);
-
-        Ok(Session {
-            gsid: response.gsid,
-            uid: response.uid,
-            screen_name: response.screen_name,
-        })
+        execute_login(&self.client, &payload).await
     }
 }
 
