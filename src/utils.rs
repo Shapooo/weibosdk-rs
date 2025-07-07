@@ -1,9 +1,8 @@
 use sha2::{Digest, Sha512};
 
-pub(crate) fn generate_s(uid: String) -> String {
-    let from = "12DC195010";
+pub(crate) fn generate_s(uid: &str, from: &str) -> String {
     let pin = "CypCHG2kSlRkdvr2RG1QF8b2lCWXl7k7";
-    generate_s_(&uid, pin, from)
+    generate_s_(uid, pin, from)
 }
 
 fn generate_s_(uid: &str, pin: &str, from: &str) -> String {
@@ -39,13 +38,14 @@ mod utils {
 
     #[test]
     fn generate_s_test() {
-        assert_eq!(generate_s("1219658392".into()), "fb111111");
-        assert_eq!(generate_s("1054595560".into()), "23777777");
-        assert_eq!(generate_s("1229101630".into()), "37222222");
-        assert_eq!(generate_s("1494639172".into()), "77999999");
-        assert_eq!(generate_s("1568849308".into()), "7ceeeeee");
-        assert_eq!(generate_s("1927972896".into()), "92888888");
-        assert_eq!(generate_s("1683934114".into()), "b8888888");
-        assert_eq!(generate_s("1982981009".into()), "f5666666");
+        let from = "12DC195010";
+        assert_eq!(generate_s("1219658392".into(), from), "fb111111");
+        assert_eq!(generate_s("1054595560".into(), from), "23777777");
+        assert_eq!(generate_s("1229101630".into(), from), "37222222");
+        assert_eq!(generate_s("1494639172".into(), from), "77999999");
+        assert_eq!(generate_s("1568849308".into(), from), "7ceeeeee");
+        assert_eq!(generate_s("1927972896".into(), from), "92888888");
+        assert_eq!(generate_s("1683934114".into(), from), "b8888888");
+        assert_eq!(generate_s("1982981009".into(), from), "f5666666");
     }
 }

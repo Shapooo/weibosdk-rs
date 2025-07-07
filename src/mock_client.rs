@@ -35,7 +35,7 @@ impl HttpResponse for MockHttpResponse {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MockClient {
     responses: Arc<Mutex<HashMap<String, MockHttpResponse>>>,
 }
