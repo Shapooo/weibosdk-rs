@@ -9,6 +9,8 @@ mod utils;
 
 pub use user::User;
 
+#[cfg(test)]
+mod mock_client;
 // const WEIBO_DOMAIN: &str = "https://api.weibo.cn";
 // const API_ACCOUNT_AVATAR: &str = "/2/account/avatar/upload.json";
 // const API_ACCOUNT_BASE: &str = "/2/account";

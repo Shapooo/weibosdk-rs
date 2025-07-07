@@ -63,6 +63,10 @@ impl<C: HttpClient> SendCode<C> {
     pub fn new(client: C) -> Self {
         Self { client }
     }
+
+    pub fn client(&self) -> &C {
+        &self.client
+    }
 }
 
 impl<C: HttpClient> SendCodeAPI<C> for SendCode<C> {
@@ -145,5 +149,63 @@ impl<C: HttpClient> LoginAPI<C> for WaitingLogin<C> {
             response.uid,
             response.screen_name,
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::mock_client::{MockClient, MockHttpResponse};
+    use serde_json::json;
+
+    #[tokio::test]
+    async fn test_get_send_code() {
+        let mock_client = MockClient::new();
+        let phone_number = "1234567890".to_string();
+
+        let send_code_response_json = json!({
+            "msg": "success"
+        });
+        mock_client.expect_post(
+            SEND_CODE_URL,
+            MockHttpResponse::new(200, &send_code_response_json.to_string()),
+        );
+
+        let send_code_instance = SendCode::new(mock_client.clone());
+        let waiting_login_result = send_code_instance.get_send_code(phone_number.clone()).await;
+
+        assert!(waiting_login_result.is_ok());
+        let waiting_login = waiting_login_result.unwrap();
+        assert_eq!(waiting_login.phone_number, phone_number);
+    }
+
+    #[tokio::test]
+    async fn test_login() {
+        let mock_client = MockClient::new();
+        let phone_number = "1234567890".to_string();
+        let sms_code = "123456".to_string();
+
+        let login_response_json = json!({
+            "gsid": "mock_gsid",
+            "uid": "mock_uid",
+            "screen_name": "mock_screen_name"
+        });
+        mock_client.expect_post(
+            LOGIN_URL,
+            MockHttpResponse::new(200, &login_response_json.to_string()),
+        );
+
+        let waiting_login_instance = WaitingLogin {
+            phone_number: phone_number.clone(),
+            client: mock_client.clone(),
+        };
+
+        let weibo_api_result = waiting_login_instance.login(&sms_code).await;
+
+        assert!(weibo_api_result.is_ok());
+        let weibo_api = weibo_api_result.unwrap();
+        assert_eq!(weibo_api.session().gsid, "mock_gsid");
+        assert_eq!(weibo_api.session().uid, "mock_uid");
+        assert_eq!(weibo_api.session().screen_name, "mock_screen_name");
     }
 }
