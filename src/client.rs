@@ -25,6 +25,11 @@ impl HttpResponse for reqwest::Response {
 
 pub trait HttpClient: Send + Sync + Clone + 'static {
     type Response: HttpResponse;
+    async fn get(
+        &self,
+        url: &str,
+        query: &(impl Serialize + Send + Sync),
+    ) -> Result<Self::Response>;
     async fn post(
         &self,
         url: &str,
@@ -34,6 +39,13 @@ pub trait HttpClient: Send + Sync + Clone + 'static {
 
 impl HttpClient for reqwest::Client {
     type Response = reqwest::Response;
+    async fn get(
+        &self,
+        url: &str,
+        query: &(impl Serialize + Send + Sync),
+    ) -> Result<Self::Response> {
+        Ok(self.get(url).query(query).send().await?)
+    }
     async fn post(
         &self,
         url: &str,

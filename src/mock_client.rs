@@ -47,6 +47,11 @@ impl MockClient {
         }
     }
 
+    pub fn expect_get(&self, url: &str, response: MockHttpResponse) {
+        let mut responses = self.responses.lock().unwrap();
+        responses.insert(url.to_string(), response);
+    }
+
     pub fn expect_post(&self, url: &str, response: MockHttpResponse) {
         let mut responses = self.responses.lock().unwrap();
         responses.insert(url.to_string(), response);
@@ -55,6 +60,18 @@ impl MockClient {
 
 impl HttpClient for MockClient {
     type Response = MockHttpResponse;
+
+    async fn get(
+        &self,
+        url: &str,
+        _query: &(impl Serialize + Send + Sync),
+    ) -> Result<Self::Response> {
+        let responses = self.responses.lock().unwrap();
+        responses
+            .get(url)
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("No mock response set for URL: {}", url))
+    }
 
     async fn post(
         &self,
