@@ -13,3 +13,6 @@ mod utils;
 
 #[cfg(test)]
 mod mock_client;
+
+pub use post::Post;
+pub use user::User;
