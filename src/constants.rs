@@ -23,5 +23,4 @@ pub mod params {
     pub const COUNT: u8 = 20;
     pub const SOURCE: &str = "4215535043";
     pub const MIX_MEDIA_ENABLE: u8 = 1;
-    pub const PAGE: u8 = 1;
 }

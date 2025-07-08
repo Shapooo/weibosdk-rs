@@ -1,12 +1,4 @@
-use anyhow::Result;
-use log::info;
-use std::path::{Path, PathBuf};
-
-use crate::{
-    client::HttpClient,
-    login::{Login, SendCode},
-    session::Session,
-};
+use crate::{client::HttpClient, session::Session};
 
 //-------------------------------------------------------------
 //---------------------- WeiboClient --------------------------
@@ -14,7 +6,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct WeiboAPI<C: HttpClient> {
-    client: C,
+    pub client: C,
     session: Session,
 }
 

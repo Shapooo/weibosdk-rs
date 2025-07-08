@@ -1,6 +1,6 @@
 pub mod client;
 pub mod error;
-pub mod favorite;
+pub mod favorites;
 pub mod login;
 pub mod post;
 pub mod session;
