@@ -124,20 +124,40 @@ async fn execute_login<C: HttpClient, P: Serialize + Send + Sync>(
         .json::<LoginResponse>()
         .await
         .map_err(|e| LoginError::NetworkError(e.into()))?;
-    debug!("{:?}", response);
 
-    Ok(Session {
-        gsid: response.gsid,
-        uid: response.uid,
-        screen_name: response.screen_name,
-    })
+    match response {
+        LoginResponse::Succ {
+            gsid,
+            uid,
+            screen_name,
+        } => Ok(Session {
+            gsid: gsid,
+            uid: uid,
+            screen_name: screen_name,
+        }),
+        LoginResponse::Fail {
+            errmsg,
+            errno: _,
+            errtype: _,
+            isblock: _,
+        } => Err(LoginError::NetworkError(anyhow::anyhow!(errmsg))),
+    }
 }
 
 #[derive(Debug, Deserialize)]
-pub struct LoginResponse {
-    pub gsid: String,
-    pub uid: String,
-    pub screen_name: String,
+#[serde(untagged)]
+pub enum LoginResponse {
+    Succ {
+        gsid: String,
+        uid: String,
+        screen_name: String,
+    },
+    Fail {
+        errmsg: String,
+        errno: i32,
+        errtype: String,
+        isblock: bool,
+    },
 }
 
 pub struct WaitingLogin<C: HttpClient> {
