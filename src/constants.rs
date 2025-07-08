@@ -24,3 +24,7 @@ pub mod params {
     pub const SOURCE: &str = "4215535043";
     pub const MIX_MEDIA_ENABLE: u8 = 1;
 }
+
+pub mod config {
+    pub const RETRY_TIMES: u8 = 3;
+}

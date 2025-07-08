@@ -37,6 +37,8 @@ pub trait HttpClient: Send + Sync + Clone + 'static {
     ) -> Result<Self::Response>;
 }
 
+use crate::constants::config::RETRY_TIMES;
+
 impl HttpClient for reqwest::Client {
     type Response = reqwest::Response;
     async fn get(
@@ -44,14 +46,56 @@ impl HttpClient for reqwest::Client {
         url: &str,
         query: &(impl Serialize + Send + Sync),
     ) -> Result<Self::Response> {
-        Ok(self.get(url).query(query).send().await?)
+        let mut attempts = 0;
+        loop {
+            let result = self.get(url).query(query).send().await;
+            match result {
+                Ok(response) => {
+                    if response.status().is_success() {
+                        return Ok(response);
+                    } else {
+                        let status = response.status();
+                        let text = response.text().await?;
+                        anyhow::bail!("unexpected status code: {status}, body: {text}");
+                    }
+                }
+                Err(e) => {
+                    if e.is_timeout() && attempts < RETRY_TIMES {
+                        attempts += 1;
+                        continue;
+                    }
+                    return Err(e.into());
+                }
+            }
+        }
     }
     async fn post(
         &self,
         url: &str,
         form: &(impl Serialize + Send + Sync),
     ) -> Result<Self::Response> {
-        Ok(self.post(url).form(form).send().await?)
+        let mut attempts = 0;
+        loop {
+            let result = self.post(url).form(form).send().await;
+            match result {
+                Ok(response) => {
+                    if response.status().is_success() {
+                        return Ok(response);
+                    } else {
+                        let status = response.status();
+                        let text = response.text().await?;
+                        anyhow::bail!("unexpected status code: {status}, body: {text}");
+                    }
+                }
+                Err(e) => {
+                    if e.is_timeout() && attempts < RETRY_TIMES {
+                        attempts += 1;
+                        continue;
+                    }
+                    return Err(e.into());
+                }
+            }
+        }
     }
 }
 
