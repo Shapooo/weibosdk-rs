@@ -5,13 +5,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::client::{HttpClient, HttpResponse};
+use crate::constants::{
+    params::*,
+    urls::{URL_LOGIN, URL_SEND_CODE},
+};
 use crate::error::LoginError;
 use crate::session::Session;
-
-const SEND_CODE_URL: &str = "https://api.weibo.cn/2/account/login_sendcode";
-const LOGIN_URL: &str = "https://api.weibo.cn/2/account/login";
-const FROM1: &str = "12DC195010";
-const LOGIN_FROM: &str = "1299295010";
 
 //-------------------------------------------------------------
 //----------------------- SendCode ----------------------------
@@ -59,16 +58,16 @@ impl<C: HttpClient> SendCode<C> {
 
     pub async fn get_send_code(self, phone_number: String) -> Result<WaitingLogin<C>> {
         let payload = SendCodePayload {
-            c: "weicoabroad",
-            from: "12DC195010",
-            source: "4215535043",
-            lang: "zh_CN",
-            locale: "zh_CN",
-            wm: "2468_1001",
-            ua: "HONOR-PGT-AN10_9_WeiboIntlAndroid_6710",
+            c: PARAM_C,
+            from: FROM,
+            source: SOURCE,
+            lang: LANG,
+            locale: LOCALE,
+            wm: WM,
+            ua: UA,
             phone: &phone_number,
         };
-        let response = self.client.post(SEND_CODE_URL, &payload).await?;
+        let response = self.client.post(URL_SEND_CODE, &payload).await?;
 
         let send_code_response = response.json::<Value>().await?;
         debug!("{:?}", send_code_response);
@@ -117,7 +116,7 @@ async fn execute_login<C: HttpClient, P: Serialize + Send + Sync>(
     payload: &P,
 ) -> std::result::Result<Session, LoginError> {
     let response = client
-        .post(LOGIN_URL, payload)
+        .post(URL_LOGIN, payload)
         .await
         .map_err(|e| LoginError::NetworkError(e.into()))?;
 
@@ -149,8 +148,8 @@ pub struct WaitingLogin<C: HttpClient> {
 impl<C: HttpClient> WaitingLogin<C> {
     pub async fn login(self, sms_code: &str) -> std::result::Result<Session, LoginError> {
         let payload = SMSLoginPayload {
-            c: "weicoabroad",
-            lang: "zh_CN",
+            c: PARAM_C,
+            lang: LANG,
             getuser: "1",
             getoauth: "1",
             getcookie: "1",
@@ -175,15 +174,15 @@ impl<C: HttpClient> Login<C> {
         session: Session,
     ) -> std::result::Result<Session, LoginError> {
         let payload = SessionRefreshPayload {
-            c: "weicoabroad",
-            lang: "zh_CN",
+            c: PARAM_C,
+            lang: LANG,
             getuser: "1",
             getoauth: "1",
             getcookie: "1",
             gsid: &session.gsid,
             uid: &session.uid,
-            from: LOGIN_FROM,
-            s: &crate::utils::generate_s(&session.uid, LOGIN_FROM),
+            from: SESSION_REFRESH_FROM,
+            s: &crate::utils::generate_s(&session.uid, FROM),
         };
         execute_login(&self.client, &payload).await
     }
@@ -192,6 +191,7 @@ impl<C: HttpClient> Login<C> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::constants::urls::{URL_LOGIN, URL_SEND_CODE};
     use crate::mock_client::{MockClient, MockHttpResponse};
     use serde_json::json;
 
@@ -204,7 +204,7 @@ mod tests {
             "msg": "success"
         });
         mock_client.expect_post(
-            SEND_CODE_URL,
+            URL_SEND_CODE,
             MockHttpResponse::new(200, &send_code_response_json.to_string()),
         );
 
@@ -228,7 +228,7 @@ mod tests {
             "screen_name": "mock_screen_name"
         });
         mock_client.expect_post(
-            LOGIN_URL,
+            URL_LOGIN,
             MockHttpResponse::new(200, &login_response_json.to_string()),
         );
 
@@ -261,7 +261,7 @@ mod tests {
             "screen_name": "test_screen_name"
         });
         mock_client.expect_post(
-            LOGIN_URL,
+            URL_LOGIN,
             MockHttpResponse::new(200, &login_response_json.to_string()),
         );
 
