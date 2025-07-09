@@ -38,5 +38,4 @@ pub struct User {
     pub domain: String,
     pub follow_me: bool,
     pub following: bool,
-    pub backedup: bool,
 }

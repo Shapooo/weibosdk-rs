@@ -18,10 +18,6 @@ pub struct UserInternal {
     #[serde(default)]
     pub avatar_hd: String,
     #[serde(default)]
-    pub planet_video: bool,
-    #[serde(default, deserialize_with = "parse_v_plus")]
-    pub v_plus: i64,
-    #[serde(default)]
     pub pc_new: i64,
     #[serde(default)]
     pub verified: bool,
@@ -40,16 +36,6 @@ pub struct UserInternal {
     pub mbrank: i64,
     #[serde(default)]
     pub mbtype: i64,
-    pub icon_list: Option<Value>,
-    #[serde(default)]
-    pub backedup: bool,
-}
-
-pub fn parse_v_plus<'de, D>(deserializer: D) -> std::result::Result<i64, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    Ok(Option::<i64>::deserialize(deserializer)?.unwrap_or_default())
 }
 
 impl TryFrom<Value> for UserInternal {
@@ -74,7 +60,6 @@ impl From<UserInternal> for User {
             domain: value.domain,
             follow_me: value.follow_me,
             following: value.following,
-            backedup: value.backedup,
         }
     }
 }
@@ -87,41 +72,30 @@ impl TryInto<Value> for UserInternal {
     }
 }
 
-// #[cfg(test)]
-// mod user_test {
-//     use super::UserInternal;
-//     use anyhow::Result;
-//     use flate2::read::GzDecoder;
-//     use serde_json::{Value, from_str};
-//     use std::io::Read;
+#[cfg(test)]
+mod tests {
+    use std::{io::Read, path::PathBuf};
 
-//     async fn load_test_case() -> Result<Vec<Value>> {
-//         let gz = include_bytes!("../../res/full.json.gz");
-//         let mut de = GzDecoder::new(gz.as_ref());
-//         let mut text = String::new();
-//         de.read_to_string(&mut text)?;
+    use super::*;
 
-//         let test_case_post: Vec<Value> = from_str(&text)?;
-//         let test_case = test_case_post
-//             .into_iter()
-//             .filter_map(|mut v| v["user"].is_object().then_some(v["user"].take()))
-//             .collect();
-//         Ok(test_case)
-//     }
-
-//     async fn parse_users(test_case: Vec<Value>) -> Result<Vec<UserInternal>> {
-//         test_case
-//             .into_iter()
-//             .map(|user| {
-//                 let user: UserInternal = user.try_into()?;
-//                 Ok(user)
-//             })
-//             .collect::<Result<Vec<_>>>()
-//     }
-
-//     #[tokio::test]
-//     async fn parse_from_json() {
-//         let test_case = load_test_case().await.unwrap();
-//         parse_users(test_case).await.unwrap();
-//     }
-// }
+    #[test]
+    fn test_deserialize_user_internal() {
+        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+        let testcase_path = PathBuf::from(manifest_dir)
+            .join("tests")
+            .join("data")
+            .join("favorites.json");
+        let mut testcase_file = std::fs::File::open(testcase_path).unwrap();
+        let mut response_body = String::new();
+        testcase_file.read_to_string(&mut response_body).unwrap();
+        let mut value = serde_json::from_str::<Value>(&response_body).unwrap();
+        if let Value::Array(v) = value["favorites"].take() {
+            value = v
+                .into_iter()
+                .map(|mut post| post["status"]["user"].take())
+                .filter(|user| !user.is_null() && !user["id"].is_null())
+                .collect();
+        }
+        let _ = serde_json::from_value::<Vec<UserInternal>>(value).unwrap();
+    }
+}

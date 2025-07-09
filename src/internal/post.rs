@@ -78,8 +78,7 @@ use crate::{Post, User};
 pub struct PostInternal {
     pub id: i64,
     pub mblogid: String,
-    pub text_raw: String,
-    pub source: String,
+    pub source: Option<String>,
     pub region_name: Option<String>,
     #[serde(default, deserialize_with = "deserialize_deleted")]
     pub deleted: bool,
@@ -88,80 +87,41 @@ pub struct PostInternal {
     pub url_struct: Option<Value>,
     pub topic_struct: Option<Value>,
     pub tag_struct: Option<Value>,
-    #[serde(default, deserialize_with = "deserialize_vec_value")]
-    pub tags: Option<Value>,
-    #[serde(
-        default,
-        rename = "customIcons",
-        deserialize_with = "deserialize_vec_value"
-    )]
-    pub custom_icons: Option<Value>,
     pub number_display_strategy: Option<Value>,
     pub mix_media_info: Option<Value>,
     pub visible: Value,
     pub text: String,
     #[serde(default)]
     pub attitudes_status: i64,
-    #[serde(default, rename = "showFeedRepost")]
-    pub show_feed_repost: bool,
-    #[serde(default, rename = "showFeedComment")]
-    pub show_feed_comment: bool,
-    #[serde(default, rename = "pictureViewerSign")]
-    pub picture_viewer_sign: bool,
-    #[serde(default, rename = "showPictureViewer")]
-    pub show_picture_viewer: bool,
     #[serde(default)]
     pub favorited: bool,
     pub can_edit: Option<bool>,
     pub is_paid: Option<bool>,
     pub share_repost_type: Option<i64>,
-    pub rid: Option<String>,
     pub pic_infos: Option<HashMap<String, Value>>,
-    pub cardid: Option<String>,
     pub pic_bg_new: Option<String>,
-    pub mark: Option<String>,
     pub mblog_vip_type: Option<i64>,
     pub reposts_count: Option<i64>,
     pub comments_count: Option<i64>,
     pub attitudes_count: Option<i64>,
     pub mlevel: Option<i64>,
-    pub complaint: Option<Value>,
     pub content_auth: Option<i64>,
     pub is_show_bulletin: Option<i64>,
     pub repost_type: Option<i64>,
     pub edit_count: Option<i64>,
     pub mblogtype: Option<i64>,
-    #[serde(rename = "textLength")]
-    pub text_length: Option<i64>,
     #[serde(default, rename = "isLongText")]
     pub is_long_text: bool,
-    #[serde(default, rename = "rcList", deserialize_with = "deserialize_vec_value")]
-    pub rc_list: Option<Value>,
     pub annotations: Option<Value>,
     pub geo: Option<Value>,
     pub pic_focus_point: Option<Value>,
     pub page_info: Option<Value>,
-    pub title: Option<Value>,
     pub continue_tag: Option<Value>,
     pub comment_manage_info: Option<Value>,
     pub created_at: String,
     pub retweeted_status: Option<Box<PostInternal>>,
     #[serde(default, deserialize_with = "deserialize_user")]
     pub user: Option<UserInternal>,
-}
-
-fn deserialize_vec_value<'de, D>(deserializer: D) -> std::result::Result<Option<Value>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let value = Option::<Value>::deserialize(deserializer)?;
-
-    if let Some(Value::Array(arr)) = &value {
-        if arr.is_empty() {
-            return Ok(None);
-        }
-    }
-    Ok(value)
 }
 
 fn deserialize_user<'de, D>(deserializer: D) -> std::result::Result<Option<UserInternal>, D::Error>
@@ -201,7 +161,6 @@ impl TryFrom<PostInternal> for Post {
         Ok(Post {
             id: value.id,
             mblogid: value.mblogid,
-            text_raw: value.text_raw,
             source: value.source,
             region_name: value.region_name,
             deleted: value.deleted,
@@ -210,10 +169,8 @@ impl TryFrom<PostInternal> for Post {
             url_struct: value.url_struct,
             topic_struct: value.topic_struct,
             tag_struct: value.tag_struct,
-            tags: value.tags,
             number_display_strategy: value.number_display_strategy,
             mix_media_info: value.mix_media_info,
-            visible: value.visible,
             text: value.text,
             attitudes_status: value.attitudes_status,
             favorited: value.favorited,
@@ -223,7 +180,6 @@ impl TryFrom<PostInternal> for Post {
             attitudes_count: value.attitudes_count,
             repost_type: value.repost_type,
             edit_count: value.edit_count,
-            text_length: value.text_length,
             is_long_text: value.is_long_text,
             geo: value.geo,
             page_info: value.page_info,
@@ -242,5 +198,31 @@ pub fn parse_created_at(created_at: &str) -> Result<DateTime<FixedOffset>> {
     match DateTime::parse_from_str(created_at, "%a %b %d %T %z %Y") {
         Ok(dt) => Ok(dt),
         Err(e) => Err(anyhow!("{e}")),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::{io::Read, path::PathBuf};
+
+    #[test]
+    fn test_deserialize_post_internal() {
+        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+        let testcase_path = PathBuf::from(manifest_dir)
+            .join("tests")
+            .join("data")
+            .join("favorites.json");
+        let mut testcase_file = std::fs::File::open(testcase_path).unwrap();
+        let mut response_body = String::new();
+        testcase_file.read_to_string(&mut response_body).unwrap();
+        let mut value = serde_json::from_str::<Value>(&response_body).unwrap();
+        value = value["favorites"].take();
+        if let Value::Array(v) = value.take() {
+            let _ = v
+                .into_iter()
+                .map(|mut post| post["status"].take())
+                .collect::<Vec<_>>();
+        }
     }
 }
