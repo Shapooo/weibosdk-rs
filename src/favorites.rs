@@ -1,10 +1,13 @@
 #![allow(async_fn_in_trait)]
-use crate::client::HttpClient;
+use anyhow::Result;
+use serde::{Deserialize, Serialize};
+
+use crate::Post;
+use crate::client::{HttpClient, HttpResponse};
 use crate::constants::{params::*, urls::URL_FAVORITES};
+use crate::internal::post::PostInternal;
 use crate::utils;
 use crate::weibo_api::WeiboAPI;
-use anyhow::Result;
-use serde::Serialize;
 
 #[derive(Serialize, Debug)]
 struct FavoritesParams<'a> {
@@ -22,13 +25,23 @@ struct FavoritesParams<'a> {
     wm: &'a str,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+struct FavoritesPost {
+    pub status: PostInternal,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct FavoritesResponse {
+    pub favorites: Vec<FavoritesPost>,
+}
+
 pub trait FavoritesAPI<C: HttpClient> {
-    async fn favorites(&self, page: u32) -> Result<C::Response>;
+    async fn favorites(&self, page: u32) -> Result<Vec<Post>>;
     async fn favorites_create() -> ();
 }
 
 impl<C: HttpClient> FavoritesAPI<C> for WeiboAPI<C> {
-    async fn favorites(&self, page: u32) -> Result<C::Response> {
+    async fn favorites(&self, page: u32) -> Result<Vec<Post>> {
         let session = self.session();
         let s = utils::generate_s(&session.uid, FROM);
         let params = FavoritesParams {
@@ -39,14 +52,21 @@ impl<C: HttpClient> FavoritesAPI<C> for WeiboAPI<C> {
             lang: LANG,
             locale: LOCALE,
             mix_media_enable: MIX_MEDIA_ENABLE,
-            page: page,
+            page,
             s: &s,
             source: SOURCE,
             ua: UA,
             wm: WM,
         };
 
-        self.client.get(URL_FAVORITES, &params).await
+        let response = self.client.get(URL_FAVORITES, &params).await?;
+        let res = response.json::<FavoritesResponse>().await?;
+        let posts = res
+            .favorites
+            .into_iter()
+            .map(|post| post.status.try_into())
+            .collect::<Result<Vec<Post>>>()?;
+        Ok(posts)
     }
 
     async fn favorites_create() -> () {
@@ -56,9 +76,10 @@ impl<C: HttpClient> FavoritesAPI<C> for WeiboAPI<C> {
 
 #[cfg(test)]
 mod tests {
+    use std::{io::Read, path::PathBuf};
+
     use super::*;
     use crate::{
-        client::HttpResponse,
         mock_client::{MockClient, MockHttpResponse},
         session::Session,
     };
@@ -73,11 +94,27 @@ mod tests {
         };
         let weibo_api = WeiboAPI::new(mock_client.clone(), session);
 
-        let mock_response = MockHttpResponse::new(200, "{\"ok\": 1}");
+        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+        let testcase_path = PathBuf::from(manifest_dir)
+            .join("tests")
+            .join("data")
+            .join("favorites.json");
+        let mut testcase_file = std::fs::File::open(testcase_path).unwrap();
+        let mut mock_response_body = String::new();
+        testcase_file
+            .read_to_string(&mut mock_response_body)
+            .unwrap();
+        let expect_posts = serde_json::from_str::<FavoritesResponse>(&mock_response_body)
+            .unwrap()
+            .favorites
+            .into_iter()
+            .map(|post| post.status.try_into())
+            .collect::<Result<Vec<Post>>>()
+            .unwrap();
+        let mock_response = MockHttpResponse::new(200, &mock_response_body);
         mock_client.expect_get(URL_FAVORITES, mock_response);
 
-        let res = weibo_api.favorites(1).await.unwrap();
-        let json: serde_json::Value = res.json().await.unwrap();
-        assert_eq!(json["ok"], 1);
+        let posts = weibo_api.favorites(1).await.unwrap();
+        assert_eq!(posts, expect_posts);
     }
 }

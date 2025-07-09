@@ -4,8 +4,6 @@ use serde_json::Value;
 
 use crate::User;
 
-const USER_INFO_API: &str = "https://weibo.com/ajax/profile/info";
-
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct UserInternal {
     #[serde(default)]

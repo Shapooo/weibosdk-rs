@@ -15,7 +15,6 @@ use weibosdk_rs::{
 async fn main() -> anyhow::Result<()> {
     simple_logger::init_with_level(log::Level::Debug).unwrap();
     let session_file = "session.json";
-    let favorites_file = "favorites.json";
     let headers = HeaderMap::from_iter([
         (
             header::USER_AGENT,
@@ -60,12 +59,7 @@ async fn main() -> anyhow::Result<()> {
     session.save(session_file)?;
     println!("Session saved to {}", session_file);
     let weibo_api = WeiboAPI::new(client, session);
-    let favorites = weibo_api.favorites(1).await?;
-    let favorites_json = favorites.json::<serde_json::Value>().await?;
-
-    let favorites_content = serde_json::to_string_pretty(&favorites_json)?;
-    std::fs::write(favorites_file, favorites_content)?;
-    println!("Favorites saved to {}", favorites_file);
+    let _favorites = weibo_api.favorites(1).await?;
 
     Ok(())
 }
