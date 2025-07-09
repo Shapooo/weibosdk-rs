@@ -1,29 +1,16 @@
 #![allow(async_fn_in_trait)]
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::Post;
 use crate::client::{HttpClient, HttpResponse};
-use crate::constants::{params::*, urls::URL_FAVORITES};
+use crate::constants::{
+    params::*,
+    urls::{URL_FAVORITES, URL_FAVORITES_DESTROY},
+};
 use crate::internal::post::PostInternal;
 use crate::utils;
 use crate::weibo_api::WeiboAPI;
-
-#[derive(Serialize, Debug)]
-struct FavoritesParams<'a> {
-    c: &'a str,
-    count: u8,
-    from: &'a str,
-    gsid: &'a str,
-    lang: &'a str,
-    locale: &'a str,
-    mix_media_enable: u8,
-    page: u32,
-    s: &'a str,
-    source: &'a str,
-    ua: &'a str,
-    wm: &'a str,
-}
 
 #[derive(Debug, Clone, Deserialize)]
 struct FavoritesPost {
@@ -37,27 +24,27 @@ struct FavoritesResponse {
 
 pub trait FavoritesAPI<C: HttpClient> {
     async fn favorites(&self, page: u32) -> Result<Vec<Post>>;
-    async fn favorites_create() -> ();
+    async fn favorites_destroy(&self, id: i64) -> Result<()>;
 }
 
 impl<C: HttpClient> FavoritesAPI<C> for WeiboAPI<C> {
     async fn favorites(&self, page: u32) -> Result<Vec<Post>> {
         let session = self.session();
         let s = utils::generate_s(&session.uid, FROM);
-        let params = FavoritesParams {
-            c: PARAM_C,
-            count: COUNT,
-            from: FROM,
-            gsid: &session.gsid,
-            lang: LANG,
-            locale: LOCALE,
-            mix_media_enable: MIX_MEDIA_ENABLE,
-            page,
-            s: &s,
-            source: SOURCE,
-            ua: UA,
-            wm: WM,
-        };
+        let params = serde_json::json!( {
+            "c": PARAM_C,
+            "count": COUNT,
+            "from": FROM,
+            "gsid": &session.gsid,
+            "lang": LANG,
+            "locale": LOCALE,
+            "mix_media_enable": MIX_MEDIA_ENABLE,
+            "page":page,
+            "s": &s,
+            "source": SOURCE,
+            "ua": UA,
+            "wm": WM,
+        });
 
         let response = self.client.get(URL_FAVORITES, &params).await?;
         let res = response.json::<FavoritesResponse>().await?;
@@ -69,8 +56,24 @@ impl<C: HttpClient> FavoritesAPI<C> for WeiboAPI<C> {
         Ok(posts)
     }
 
-    async fn favorites_create() -> () {
-        todo!()
+    async fn favorites_destroy(&self, id: i64) -> Result<()> {
+        let session = self.session();
+        let s = utils::generate_s(&session.uid, FROM);
+        let params = serde_json::json!({
+            "id" :id,
+            "c": PARAM_C,
+            "from": FROM,
+            "gsid": &session.gsid,
+            "lang": LANG,
+            "locale": LOCALE,
+            "s": &s,
+            "source": SOURCE,
+            "ua": UA,
+            "wm": WM,
+
+        });
+        let _ = self.client.post(URL_FAVORITES_DESTROY, &params).await?;
+        Ok(())
     }
 }
 
@@ -116,5 +119,23 @@ mod tests {
 
         let posts = weibo_api.favorites(1).await.unwrap();
         assert_eq!(posts, expect_posts);
+    }
+
+    #[tokio::test]
+    async fn test_favorites_destroy() {
+        let mock_client = MockClient::new();
+        let session = Session {
+            gsid: "test_gsid".to_string(),
+            uid: "test_uid".to_string(),
+            screen_name: "test_screen_name".to_string(),
+        };
+        let weibo_api = WeiboAPI::new(mock_client.clone(), session);
+        let id = 12345;
+
+        let mock_response = MockHttpResponse::new(200, "{}");
+        mock_client.expect_post(URL_FAVORITES_DESTROY, mock_response);
+
+        let result = weibo_api.favorites_destroy(id).await;
+        assert!(result.is_ok());
     }
 }

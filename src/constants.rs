@@ -9,6 +9,7 @@ pub mod urls {
     pub const URL_FAVORITES: &str = full_url!("/2/favorites");
     pub const URL_SEND_CODE: &str = full_url!("/2/account/login_sendcode");
     pub const URL_LOGIN: &str = full_url!("/2/account/login");
+    pub const URL_FAVORITES_DESTROY: &str = full_url!("/2/favorites/destroy");
 }
 
 // Common Parameters
