@@ -1,4 +1,5 @@
 pub mod client;
+pub mod err_response;
 pub mod error;
 pub mod favorites;
 pub mod login;

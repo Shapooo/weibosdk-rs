@@ -9,6 +9,7 @@ use crate::constants::{
     params::*,
     urls::{URL_LOGIN, URL_SEND_CODE},
 };
+use crate::err_response::ErrResponse;
 use crate::error::LoginError;
 use crate::session::Session;
 
@@ -29,18 +30,11 @@ struct SendCodePayload<'a> {
 }
 
 #[allow(unused)]
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(untagged)]
 enum SendCodeResponse {
-    Succ {
-        msg: String,
-    },
-    Fail {
-        errmsg: String,
-        errno: i32,
-        errtype: String,
-        isblock: bool,
-    },
+    Succ { msg: String },
+    Fail(ErrResponse),
 }
 
 pub struct SendCode<C: HttpClient> {
@@ -131,16 +125,13 @@ async fn execute_login<C: HttpClient, P: Serialize + Send + Sync>(
             uid,
             screen_name,
         } => Ok(Session {
-            gsid: gsid,
-            uid: uid,
-            screen_name: screen_name,
+            gsid,
+            uid,
+            screen_name,
         }),
-        LoginResponse::Fail {
-            errmsg,
-            errno: _,
-            errtype: _,
-            isblock: _,
-        } => Err(LoginError::NetworkError(anyhow::anyhow!(errmsg))),
+        LoginResponse::Fail(err_res) => {
+            Err(LoginError::NetworkError(anyhow::anyhow!(err_res.errmsg)))
+        }
     }
 }
 
@@ -152,12 +143,7 @@ pub enum LoginResponse {
         uid: String,
         screen_name: String,
     },
-    Fail {
-        errmsg: String,
-        errno: i32,
-        errtype: String,
-        isblock: bool,
-    },
+    Fail(ErrResponse),
 }
 
 pub struct WaitingLogin<C: HttpClient> {
