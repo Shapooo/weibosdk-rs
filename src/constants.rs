@@ -11,6 +11,7 @@ pub mod urls {
     pub const URL_LOGIN: &str = full_url!("/2/account/login");
     pub const URL_FAVORITES_DESTROY: &str = full_url!("/2/favorites/destroy");
     pub const URL_BUILD_COMMENTS: &str = full_url!("/2/comments/build_comments");
+    pub const URL_STATUSES_SHOW: &str = full_url!("2/2statuses/show");
 }
 
 // Common Parameters

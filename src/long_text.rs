@@ -2,8 +2,8 @@
 use anyhow::Result;
 
 use crate::client::{HttpClient, HttpResponse};
-use crate::constants::{params::*, urls::URL_BUILD_COMMENTS};
-use crate::internal::build_comments::BuildCommentsResponse;
+use crate::constants::{params::*, urls::URL_STATUSES_SHOW};
+use crate::internal::statuses_show::StatusesShow;
 use crate::utils;
 use crate::weibo_api::WeiboAPI;
 
@@ -29,9 +29,9 @@ impl<C: HttpClient> LongTextAPI<C> for WeiboAPI<C> {
             "is_show_bulletin": 2,
         });
 
-        let response = self.client.get(URL_BUILD_COMMENTS, &params).await?;
-        let res = response.json::<BuildCommentsResponse>().await?;
-        Ok(res.status.long_text.long_text_content)
+        let response = self.client.get(URL_STATUSES_SHOW, &params).await?;
+        let res = response.json::<StatusesShow>().await?;
+        Ok(res.long_text.content)
     }
 }
 
@@ -65,13 +65,12 @@ mod tests {
         testcase_file
             .read_to_string(&mut mock_response_body)
             .unwrap();
-        let expect_long_text = serde_json::from_str::<BuildCommentsResponse>(&mock_response_body)
+        let expect_long_text = serde_json::from_str::<StatusesShow>(&mock_response_body)
             .unwrap()
-            .status
             .long_text
-            .long_text_content;
+            .content;
         let mock_response = MockHttpResponse::new(200, &mock_response_body);
-        mock_client.expect_get(URL_BUILD_COMMENTS, mock_response);
+        mock_client.expect_get(URL_STATUSES_SHOW, mock_response);
 
         let long_text = weibo_api.get_long_text(12345).await.unwrap();
         assert_eq!(long_text, expect_long_text);
