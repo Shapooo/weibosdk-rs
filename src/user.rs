@@ -28,7 +28,6 @@
 #[derive(Debug, Clone, PartialEq)]
 pub struct User {
     pub id: i64,
-    pub profile_url: String,
     pub screen_name: String,
     pub profile_image_url: String,
     pub avatar_large: String,

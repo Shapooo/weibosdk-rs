@@ -8,7 +8,6 @@ use crate::User;
 pub struct UserInternal {
     #[serde(default)]
     pub id: i64,
-    pub profile_url: String,
     #[serde(default)]
     pub screen_name: String,
     #[serde(default)]
@@ -50,7 +49,6 @@ impl From<UserInternal> for User {
     fn from(value: UserInternal) -> Self {
         User {
             id: value.id,
-            profile_url: value.profile_url,
             screen_name: value.screen_name,
             profile_image_url: value.profile_image_url,
             avatar_large: value.avatar_large,
