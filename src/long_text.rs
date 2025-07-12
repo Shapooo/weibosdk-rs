@@ -7,11 +7,11 @@ use crate::internal::statuses_show::StatusesShow;
 use crate::utils;
 use crate::weibo_api::WeiboAPI;
 
-pub trait LongTextAPI<C: HttpClient> {
+pub trait LongTextAPI {
     async fn get_long_text(&self, id: i64) -> Result<String>;
 }
 
-impl<C: HttpClient> LongTextAPI<C> for WeiboAPI<C> {
+impl<C: HttpClient> LongTextAPI for WeiboAPI<C> {
     async fn get_long_text(&self, id: i64) -> Result<String> {
         let session = self.session();
         let s = utils::generate_s(&session.uid, FROM);

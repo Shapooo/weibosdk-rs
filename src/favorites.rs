@@ -22,12 +22,12 @@ struct FavoritesResponse {
     pub favorites: Vec<FavoritesPost>,
 }
 
-pub trait FavoritesAPI<C: HttpClient> {
+pub trait FavoritesAPI {
     async fn favorites(&self, page: u32) -> Result<Vec<Post>>;
     async fn favorites_destroy(&self, id: i64) -> Result<()>;
 }
 
-impl<C: HttpClient> FavoritesAPI<C> for WeiboAPI<C> {
+impl<C: HttpClient> FavoritesAPI for WeiboAPI<C> {
     async fn favorites(&self, page: u32) -> Result<Vec<Post>> {
         let session = self.session();
         let s = utils::generate_s(&session.uid, FROM);
