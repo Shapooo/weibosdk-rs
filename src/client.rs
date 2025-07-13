@@ -1,7 +1,8 @@
 #![allow(async_fn_in_trait)]
-use anyhow::Result;
 use bytes::Bytes;
 use serde::{Serialize, de::DeserializeOwned};
+
+use crate::error::{Error, Result};
 
 pub trait HttpResponse: Send + Sync + 'static {
     async fn json<T: DeserializeOwned>(self) -> Result<T>;
@@ -54,9 +55,9 @@ impl HttpClient for reqwest::Client {
                     if response.status().is_success() {
                         return Ok(response);
                     } else {
-                        let status = response.status();
-                        let text = response.text().await?;
-                        anyhow::bail!("unexpected status code: {status}, body: {text}");
+                        return Err(Error::NetworkError(
+                            response.error_for_status().err().unwrap(),
+                        ));
                     }
                 }
                 Err(e) => {
@@ -69,6 +70,7 @@ impl HttpClient for reqwest::Client {
             }
         }
     }
+
     async fn post(
         &self,
         url: &str,
@@ -82,9 +84,9 @@ impl HttpClient for reqwest::Client {
                     if response.status().is_success() {
                         return Ok(response);
                     } else {
-                        let status = response.status();
-                        let text = response.text().await?;
-                        anyhow::bail!("unexpected status code: {status}, body: {text}");
+                        return Err(Error::NetworkError(
+                            response.error_for_status().err().unwrap(),
+                        ));
                     }
                 }
                 Err(e) => {

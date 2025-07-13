@@ -18,5 +18,6 @@ mod utils;
 #[cfg(test)]
 mod mock_client;
 
+pub use error::{Error, Result};
 pub use post::Post;
 pub use user::User;

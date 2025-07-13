@@ -1,8 +1,8 @@
-use anyhow::Error;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::User;
+use crate::error::{Error, Result};
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct UserInternal {
@@ -40,7 +40,7 @@ pub struct UserInternal {
 impl TryFrom<Value> for UserInternal {
     type Error = Error;
 
-    fn try_from(value: Value) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: Value) -> Result<Self> {
         Ok(serde_json::from_value(value)?)
     }
 }

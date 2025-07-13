@@ -1,10 +1,10 @@
 #![allow(async_fn_in_trait)]
-use anyhow::{Result, anyhow};
 use serde::Deserialize;
 
 use crate::client::{HttpClient, HttpResponse};
 use crate::constants::{params::*, urls::URL_STATUSES_SHOW};
 use crate::err_response::ErrResponse;
+use crate::error::{Error, Result};
 use crate::internal::statuses_show::StatusesShow;
 use crate::utils;
 use crate::weibo_api::WeiboAPI;
@@ -42,12 +42,7 @@ impl<C: HttpClient> LongTextAPI for WeiboAPI<C> {
         let res = response.json::<LongTextResponse>().await?;
         match res {
             LongTextResponse::Succ(statuses_show) => Ok(statuses_show.long_text.content),
-            LongTextResponse::Fail(err) => Err(anyhow!(
-                "api call error: {}, {}, {}",
-                err.errno,
-                err.errmsg,
-                err.errtype
-            )),
+            LongTextResponse::Fail(err) => Err(Error::ApiError(err)),
         }
     }
 }

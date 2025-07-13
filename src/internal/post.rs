@@ -1,11 +1,11 @@
-use std::collections::HashMap;
-
-use anyhow::{Error, Result, anyhow};
 use chrono::{DateTime, FixedOffset};
 use serde::Deserialize;
 use serde_json::{Value, from_value};
 
+use std::collections::HashMap;
+
 use super::user::UserInternal;
+use crate::error::{Error, Result};
 use crate::{Post, User};
 
 /** 微博博文数据
@@ -150,14 +150,14 @@ where
 
 impl TryFrom<Box<PostInternal>> for Box<Post> {
     type Error = Error;
-    fn try_from(value: Box<PostInternal>) -> Result<Self, Self::Error> {
+    fn try_from(value: Box<PostInternal>) -> Result<Self> {
         Ok(Box::new((*value).try_into()?))
     }
 }
 
 impl TryFrom<PostInternal> for Post {
     type Error = Error;
-    fn try_from(value: PostInternal) -> Result<Self, Self::Error> {
+    fn try_from(value: PostInternal) -> Result<Self> {
         Ok(Post {
             id: value.id,
             mblogid: value.mblogid,
@@ -197,7 +197,7 @@ impl TryFrom<PostInternal> for Post {
 pub fn parse_created_at(created_at: &str) -> Result<DateTime<FixedOffset>> {
     match DateTime::parse_from_str(created_at, "%a %b %d %T %z %Y") {
         Ok(dt) => Ok(dt),
-        Err(e) => Err(anyhow!("{e}")),
+        Err(e) => Err(Error::DataConversionError(e.to_string())),
     }
 }
 

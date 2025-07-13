@@ -1,5 +1,4 @@
 #![allow(async_fn_in_trait)]
-use anyhow::Result;
 use log::debug;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -10,7 +9,7 @@ use crate::constants::{
     urls::{URL_LOGIN, URL_SEND_CODE},
 };
 use crate::err_response::ErrResponse;
-use crate::error::LoginError;
+use crate::error::{Error, Result};
 use crate::session::Session;
 
 //-------------------------------------------------------------
@@ -108,16 +107,10 @@ struct SessionRefreshPayload<'a> {
 async fn execute_login<C: HttpClient, P: Serialize + Send + Sync>(
     client: &C,
     payload: &P,
-) -> std::result::Result<Session, LoginError> {
-    let response = client
-        .post(URL_LOGIN, payload)
-        .await
-        .map_err(|e| LoginError::NetworkError(e.into()))?;
+) -> Result<Session> {
+    let response = client.post(URL_LOGIN, payload).await?;
 
-    let response = response
-        .json::<LoginResponse>()
-        .await
-        .map_err(|e| LoginError::NetworkError(e.into()))?;
+    let response = response.json::<LoginResponse>().await?;
 
     match response {
         LoginResponse::Succ {
@@ -129,9 +122,7 @@ async fn execute_login<C: HttpClient, P: Serialize + Send + Sync>(
             uid,
             screen_name,
         }),
-        LoginResponse::Fail(err_res) => {
-            Err(LoginError::NetworkError(anyhow::anyhow!(err_res.errmsg)))
-        }
+        LoginResponse::Fail(err_res) => Err(Error::LoginError(err_res.errmsg)),
     }
 }
 
@@ -152,7 +143,7 @@ pub struct WaitingLogin<C: HttpClient> {
 }
 
 impl<C: HttpClient> WaitingLogin<C> {
-    pub async fn login(self, sms_code: &str) -> std::result::Result<Session, LoginError> {
+    pub async fn login(self, sms_code: &str) -> Result<Session> {
         let payload = SMSLoginPayload {
             c: PARAM_C,
             lang: LANG,
@@ -175,10 +166,7 @@ impl<C: HttpClient> Login<C> {
         Self { client }
     }
 
-    pub async fn login_with_session(
-        &self,
-        session: Session,
-    ) -> std::result::Result<Session, LoginError> {
+    pub async fn login_with_session(&self, session: Session) -> Result<Session> {
         let payload = SessionRefreshPayload {
             c: PARAM_C,
             lang: LANG,

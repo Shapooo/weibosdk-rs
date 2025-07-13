@@ -1,5 +1,4 @@
 #![allow(async_fn_in_trait)]
-use anyhow::{Result, anyhow};
 use serde::Deserialize;
 
 use crate::Post;
@@ -9,6 +8,7 @@ use crate::constants::{
     urls::{URL_FAVORITES, URL_FAVORITES_DESTROY},
 };
 use crate::err_response::ErrResponse;
+use crate::error::{Error, Result};
 use crate::internal::post::PostInternal;
 use crate::utils;
 use crate::weibo_api::WeiboAPI;
@@ -55,16 +55,18 @@ impl<C: HttpClient> FavoritesAPI for WeiboAPI<C> {
             FavoritesResponse::Succ { favorites } => {
                 let posts = favorites
                     .into_iter()
-                    .map(|post| post.status.try_into())
+                    .map(|post| {
+                        post.status.try_into().map_err(|e: Error| {
+                            Error::DataConversionError(format!(
+                                "post internal to post failed: {}",
+                                e
+                            ))
+                        })
+                    })
                     .collect::<Result<Vec<Post>>>()?;
                 Ok(posts)
             }
-            FavoritesResponse::Fail(err) => Err(anyhow!(
-                "api call error: {}, {}, {}",
-                err.errno,
-                err.errmsg,
-                err.errtype
-            )),
+            FavoritesResponse::Fail(err) => Err(Error::ApiError(err)),
         }
     }
 
@@ -123,7 +125,11 @@ mod tests {
         let expect_posts = match res {
             FavoritesResponse::Succ { favorites } => favorites
                 .into_iter()
-                .map(|post| post.status.try_into())
+                .map(|post| {
+                    post.status.try_into().map_err(|e: Error| {
+                        Error::DataConversionError(format!("post internal to post failed: {}", e))
+                    })
+                })
                 .collect::<Result<Vec<Post>>>()
                 .unwrap(),
             FavoritesResponse::Fail(_) => panic!("unexpected fail response"),

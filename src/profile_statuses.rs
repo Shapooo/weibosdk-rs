@@ -1,11 +1,11 @@
 #![allow(async_fn_in_trait)]
-use anyhow::{Result, anyhow};
 use serde::Deserialize;
 
 use crate::Post;
 use crate::client::{HttpClient, HttpResponse};
 use crate::constants::{params::*, urls::*};
 use crate::err_response::ErrResponse;
+use crate::error::{Error, Result};
 use crate::internal::post::PostInternal;
 use crate::utils;
 use crate::weibo_api::WeiboAPI;
@@ -53,14 +53,13 @@ impl<C: HttpClient> ProfileStatusesAPI for WeiboAPI<C> {
             ProfileStatusesResponse::Succ { cards } => Ok(cards
                 .into_iter()
                 .filter_map(|card| card.mblog)
-                .map(|post| post.try_into())
+                .map(|post| {
+                    post.try_into().map_err(|e: Error| {
+                        Error::DataConversionError(format!("post internal to post failed: {}", e))
+                    })
+                })
                 .collect::<Result<Vec<Post>>>()?),
-            ProfileStatusesResponse::Fail(err) => Err(anyhow!(
-                "api call error: {}, {}, {}",
-                err.errno,
-                err.errmsg,
-                err.errtype
-            )),
+            ProfileStatusesResponse::Fail(err) => Err(Error::ApiError(err)),
         }
     }
 }
@@ -100,7 +99,11 @@ mod tests {
             ProfileStatusesResponse::Succ { cards } => cards
                 .into_iter()
                 .filter_map(|card| card.mblog)
-                .map(|card| card.try_into())
+                .map(|card| {
+                    card.try_into().map_err(|e: Error| {
+                        Error::DataConversionError(format!("post internal to post failed: {}", e))
+                    })
+                })
                 .collect::<Result<Vec<Post>>>()
                 .unwrap(),
             ProfileStatusesResponse::Fail(_) => panic!("unexpected fail response"),

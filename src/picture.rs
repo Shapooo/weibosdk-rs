@@ -1,8 +1,8 @@
 #![allow(async_fn_in_trait)]
-use anyhow::Result;
 use bytes::Bytes;
 
 use crate::client::{HttpClient, HttpResponse};
+use crate::error::Result;
 use crate::weibo_api::WeiboAPI;
 
 pub trait PictureDownloader {

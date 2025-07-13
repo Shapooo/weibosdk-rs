@@ -1,10 +1,11 @@
-use anyhow::Result;
 use bytes::Bytes;
 use serde::{Serialize, de::DeserializeOwned};
+
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use crate::client::{HttpClient, HttpResponse};
+use crate::error::{Error, Result};
 
 #[derive(Debug, Clone)]
 pub struct MockHttpResponse {
@@ -30,11 +31,11 @@ impl MockHttpResponse {
 
 impl HttpResponse for MockHttpResponse {
     async fn json<T: DeserializeOwned>(self) -> Result<T> {
-        serde_json::from_slice(&self.body).map_err(anyhow::Error::from)
+        serde_json::from_slice(&self.body).map_err(Error::from)
     }
 
     async fn text(self) -> Result<String> {
-        String::from_utf8(self.body.to_vec()).map_err(anyhow::Error::from)
+        String::from_utf8(self.body.to_vec()).map_err(|e| Error::DataConversionError(e.to_string()))
     }
 
     async fn bytes(self) -> Result<Bytes> {
@@ -74,10 +75,9 @@ impl HttpClient for MockClient {
         _query: &(impl Serialize + Send + Sync),
     ) -> Result<Self::Response> {
         let responses = self.responses.lock().unwrap();
-        responses
-            .get(url)
-            .cloned()
-            .ok_or_else(|| anyhow::anyhow!("No mock response set for URL: {}", url))
+        responses.get(url).cloned().ok_or_else(|| {
+            Error::DataConversionError(format!("No mock response set for URL: {}", url))
+        })
     }
 
     async fn post(
@@ -86,10 +86,9 @@ impl HttpClient for MockClient {
         _form: &(impl Serialize + Send + Sync),
     ) -> Result<Self::Response> {
         let responses = self.responses.lock().unwrap();
-        responses
-            .get(url)
-            .cloned()
-            .ok_or_else(|| anyhow::anyhow!("No mock response set for URL: {}", url))
+        responses.get(url).cloned().ok_or_else(|| {
+            Error::DataConversionError(format!("No mock response set for URL: {}", url))
+        })
     }
 }
 
@@ -132,7 +131,7 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err().to_string(),
-            "No mock response set for URL: http://example.com/api/test_fail"
+            "Failed to convert data: No mock response set for URL: http://example.com/api/test_fail"
         );
     }
 }

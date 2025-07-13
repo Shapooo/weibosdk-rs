@@ -1,7 +1,8 @@
-use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
+
+use crate::error::Result;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Session {

@@ -1,33 +1,26 @@
-use std::fmt;
+use thiserror::Error;
 
-#[derive(Debug)]
-pub enum LoginError {
-    SessionNotFound,
-    SessionInvalid,
-    NetworkError(anyhow::Error),
+use crate::err_response::ErrResponse;
+
+#[derive(Error, Debug)]
+pub enum Error {
+    #[error("Network request failed: {0}")]
+    NetworkError(#[from] reqwest::Error),
+
+    #[error("API returned an error: {0:?}")]
+    ApiError(ErrResponse),
+
+    #[error("Failed to deserialize response: {0}")]
+    DeserializationError(#[from] serde_json::Error),
+
+    #[error("Failed to convert data: {0}")]
+    DataConversionError(String),
+
+    #[error("Login failed: {0}")]
+    LoginError(String),
+
+    #[error("I/O error: {0}")]
+    IoError(#[from] std::io::Error),
 }
 
-impl fmt::Display for LoginError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            LoginError::SessionNotFound => write!(f, "Session not found"),
-            LoginError::SessionInvalid => write!(f, "Session invalid"),
-            LoginError::NetworkError(err) => write!(f, "Network error: {}", err),
-        }
-    }
-}
-
-impl std::error::Error for LoginError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            LoginError::NetworkError(err) => Some(err.as_ref()),
-            _ => None,
-        }
-    }
-}
-
-impl From<anyhow::Error> for LoginError {
-    fn from(err: anyhow::Error) -> Self {
-        LoginError::NetworkError(err)
-    }
-}
+pub type Result<T> = std::result::Result<T, Error>;
