@@ -21,3 +21,11 @@ mod mock_client;
 pub use error::{Error, Result};
 pub use post::Post;
 pub use user::User;
+
+pub trait WeiboAPI:
+    favorites::FavoritesAPI
+    + picture::PictureDownloader
+    + long_text::LongTextAPI
+    + profile_statuses::ProfileStatusesAPI
+{
+}

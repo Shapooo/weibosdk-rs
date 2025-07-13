@@ -8,7 +8,7 @@ use crate::err_response::ErrResponse;
 use crate::error::{Error, Result};
 use crate::internal::post::PostInternal;
 use crate::utils;
-use crate::weibo_api::WeiboAPI;
+use crate::weibo_api::WeiboAPIImpl;
 
 #[derive(Debug, Clone, Deserialize)]
 struct Card {
@@ -28,7 +28,7 @@ pub trait ProfileStatusesAPI {
     async fn profile_statuses(&self, uid: i64, page: u32) -> Result<Vec<Post>>;
 }
 
-impl<C: HttpClient> ProfileStatusesAPI for WeiboAPI<C> {
+impl<C: HttpClient> ProfileStatusesAPI for WeiboAPIImpl<C> {
     async fn profile_statuses(&self, uid: i64, page: u32) -> Result<Vec<Post>> {
         let session = self.session();
         let s = utils::generate_s(&session.uid, FROM);
@@ -75,7 +75,7 @@ mod tests {
             uid: "test_uid".to_string(),
             screen_name: "test_screen_name".to_string(),
         };
-        let weibo_api = WeiboAPI::new(mock_client.clone(), session);
+        let weibo_api = WeiboAPIImpl::new(mock_client.clone(), session);
 
         let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
         let testcase_path = PathBuf::from(manifest_dir)
@@ -113,14 +113,14 @@ mod tests {
 #[cfg(test)]
 mod real_tests {
     use super::*;
-    use crate::{client, session::Session, weibo_api::WeiboAPI};
+    use crate::{client, session::Session, weibo_api::WeiboAPIImpl};
 
     #[tokio::test]
     async fn test_real_profile_statuses() {
         let session_file = "session.json";
         if let Ok(session) = Session::load(session_file) {
             let client = client::new_client_with_headers().unwrap();
-            let weibo_api = WeiboAPI::new(client, session);
+            let weibo_api = WeiboAPIImpl::new(client, session);
             let posts = weibo_api.profile_statuses(1401527553, 1).await.unwrap();
             assert!(!posts.is_empty());
         }

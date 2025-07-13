@@ -7,7 +7,7 @@ use crate::err_response::ErrResponse;
 use crate::error::{Error, Result};
 use crate::internal::statuses_show::StatusesShow;
 use crate::utils;
-use crate::weibo_api::WeiboAPI;
+use crate::weibo_api::WeiboAPIImpl;
 
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
@@ -20,7 +20,7 @@ pub trait LongTextAPI {
     async fn get_long_text(&self, id: i64) -> Result<String>;
 }
 
-impl<C: HttpClient> LongTextAPI for WeiboAPI<C> {
+impl<C: HttpClient> LongTextAPI for WeiboAPIImpl<C> {
     async fn get_long_text(&self, id: i64) -> Result<String> {
         let session = self.session();
         let s = utils::generate_s(&session.uid, FROM);
@@ -57,7 +57,7 @@ mod tests {
             uid: "test_uid".to_string(),
             screen_name: "test_screen_name".to_string(),
         };
-        let weibo_api = WeiboAPI::new(mock_client.clone(), session);
+        let weibo_api = WeiboAPIImpl::new(mock_client.clone(), session);
 
         let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
         let testcase_path = PathBuf::from(manifest_dir)
@@ -84,14 +84,14 @@ mod tests {
 #[cfg(test)]
 mod real_tests {
     use super::*;
-    use crate::{client, session::Session, weibo_api::WeiboAPI};
+    use crate::{client, session::Session, weibo_api::WeiboAPIImpl};
 
     #[tokio::test]
     async fn test_real_get_long_text() {
         let session_file = "session.json";
         if let Ok(session) = Session::load(session_file) {
             let client = client::new_client_with_headers().unwrap();
-            let weibo_api = WeiboAPI::new(client, session);
+            let weibo_api = WeiboAPIImpl::new(client, session);
             let long_text = weibo_api.get_long_text(5179586393932632).await.unwrap();
             assert!(!long_text.is_empty());
         }

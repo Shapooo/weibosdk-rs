@@ -11,7 +11,7 @@ use crate::err_response::ErrResponse;
 use crate::error::{Error, Result};
 use crate::internal::post::PostInternal;
 use crate::utils;
-use crate::weibo_api::WeiboAPI;
+use crate::weibo_api::WeiboAPIImpl;
 
 #[derive(Debug, Clone, Deserialize)]
 struct FavoritesPost {
@@ -30,7 +30,7 @@ pub trait FavoritesAPI {
     async fn favorites_destroy(&self, id: i64) -> Result<()>;
 }
 
-impl<C: HttpClient> FavoritesAPI for WeiboAPI<C> {
+impl<C: HttpClient> FavoritesAPI for WeiboAPIImpl<C> {
     async fn favorites(&self, page: u32) -> Result<Vec<Post>> {
         let session = self.session();
         let s = utils::generate_s(&session.uid, FROM);
@@ -92,7 +92,7 @@ mod tests {
             uid: "test_uid".to_string(),
             screen_name: "test_screen_name".to_string(),
         };
-        let weibo_api = WeiboAPI::new(mock_client.clone(), session);
+        let weibo_api = WeiboAPIImpl::new(mock_client.clone(), session);
 
         let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
         let testcase_path = PathBuf::from(manifest_dir)
@@ -133,7 +133,7 @@ mod tests {
             uid: "test_uid".to_string(),
             screen_name: "test_screen_name".to_string(),
         };
-        let weibo_api = WeiboAPI::new(mock_client.clone(), session);
+        let weibo_api = WeiboAPIImpl::new(mock_client.clone(), session);
         let id = 12345;
 
         let mock_response = MockHttpResponse::new(200, "{}");
@@ -147,14 +147,14 @@ mod tests {
 #[cfg(test)]
 mod real_tests {
     use super::*;
-    use crate::{client, session::Session, weibo_api::WeiboAPI};
+    use crate::{client, session::Session, weibo_api::WeiboAPIImpl};
 
     #[tokio::test]
     async fn test_real_favorites() {
         let session_file = "session.json";
         if let Ok(session) = Session::load(session_file) {
             let client = client::new_client_with_headers().unwrap();
-            let weibo_api = WeiboAPI::new(client, session);
+            let weibo_api = WeiboAPIImpl::new(client, session);
             let _ = weibo_api.favorites(1).await.unwrap();
         }
     }

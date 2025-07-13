@@ -3,13 +3,13 @@ use bytes::Bytes;
 
 use crate::client::{HttpClient, HttpResponse};
 use crate::error::Result;
-use crate::weibo_api::WeiboAPI;
+use crate::weibo_api::WeiboAPIImpl;
 
 pub trait PictureDownloader {
     async fn download_picture(&self, url: &str) -> Result<Bytes>;
 }
 
-impl<C: HttpClient> PictureDownloader for WeiboAPI<C> {
+impl<C: HttpClient> PictureDownloader for WeiboAPIImpl<C> {
     async fn download_picture(&self, url: &str) -> Result<Bytes> {
         let client = &self.client;
         let response = client.get(url, &serde_json::json!({})).await?;
@@ -34,7 +34,7 @@ mod tests {
             uid: "test_uid".to_string(),
             screen_name: "test_screen_name".to_string(),
         };
-        let weibo_api = WeiboAPI::new(mock_client.clone(), session);
+        let weibo_api = WeiboAPIImpl::new(mock_client.clone(), session);
 
         let picture_data = b"This is a fake picture file.";
         let url = "http://example.com/picture.jpg";

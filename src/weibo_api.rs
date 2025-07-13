@@ -1,21 +1,19 @@
 use crate::{client::HttpClient, session::Session};
 
-//-------------------------------------------------------------
-//---------------------- WeiboClient --------------------------
-//-------------------------------------------------------------
-
 #[derive(Debug)]
-pub struct WeiboAPI<C: HttpClient> {
+pub struct WeiboAPIImpl<C: HttpClient> {
     pub client: C,
     session: Session,
 }
 
-impl<C: HttpClient> WeiboAPI<C> {
+impl<C: HttpClient> WeiboAPIImpl<C> {
     pub fn new(client: C, session: Session) -> Self {
-        WeiboAPI { client, session }
+        WeiboAPIImpl { client, session }
     }
 
     pub fn session(&self) -> &Session {
         &self.session
     }
 }
+
+impl<C: HttpClient> crate::WeiboAPI for WeiboAPIImpl<C> {}

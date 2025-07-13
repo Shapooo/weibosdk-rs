@@ -1,14 +1,10 @@
-use reqwest::{
-    Client,
-    header::{self, HeaderMap, HeaderValue},
-};
 use simple_logger;
 use std::io::{self, Write};
 use weibosdk_rs::{
     favorites::FavoritesAPI,
     login::{Login, SendCode},
     session::Session,
-    weibo_api::WeiboAPI,
+    weibo_api::WeiboAPIImpl,
 };
 
 #[tokio::main]
@@ -45,7 +41,7 @@ async fn main() -> anyhow::Result<()> {
 
     session.save(session_file)?;
     println!("Session saved to {}", session_file);
-    let weibo_api = WeiboAPI::new(client, session);
+    let weibo_api = WeiboAPIImpl::new(client, session);
     let _favorites = weibo_api.favorites(1).await?;
 
     Ok(())
