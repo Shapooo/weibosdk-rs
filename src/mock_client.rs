@@ -1,6 +1,6 @@
 use anyhow::Result;
 use bytes::Bytes;
-use serde::{Serialize, de::DeserializeOwned};
+use serde::{de::DeserializeOwned, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
@@ -9,29 +9,36 @@ use crate::client::{HttpClient, HttpResponse};
 #[derive(Debug, Clone)]
 pub struct MockHttpResponse {
     status: u16,
-    body: String,
+    body: Bytes,
 }
 
 impl MockHttpResponse {
     pub fn new(status: u16, body: &str) -> Self {
         Self {
             status,
-            body: body.to_string(),
+            body: Bytes::from(body.to_string()),
+        }
+    }
+
+    pub fn new_with_bytes(status: u16, body: &[u8]) -> Self {
+        Self {
+            status,
+            body: Bytes::from(body.to_vec()),
         }
     }
 }
 
 impl HttpResponse for MockHttpResponse {
     async fn json<T: DeserializeOwned>(self) -> Result<T> {
-        serde_json::from_str(&self.body).map_err(anyhow::Error::from)
+        serde_json::from_slice(&self.body).map_err(anyhow::Error::from)
     }
 
     async fn text(self) -> Result<String> {
-        Ok(self.body)
+        String::from_utf8(self.body.to_vec()).map_err(anyhow::Error::from)
     }
 
     async fn bytes(self) -> Result<Bytes> {
-        Ok(Bytes::from(self.body))
+        Ok(self.body)
     }
 }
 

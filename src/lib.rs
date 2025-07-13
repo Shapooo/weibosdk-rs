@@ -9,6 +9,7 @@ pub mod profile_statuses;
 pub mod session;
 pub mod user;
 pub mod weibo_api;
+pub mod picture;
 
 mod constants;
 mod internal;
