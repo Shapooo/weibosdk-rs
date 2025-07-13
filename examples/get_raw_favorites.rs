@@ -15,20 +15,7 @@ use weibosdk_rs::{
 async fn main() -> anyhow::Result<()> {
     simple_logger::init_with_level(log::Level::Debug).unwrap();
     let session_file = "session.json";
-    let headers = HeaderMap::from_iter([
-        (
-            header::USER_AGENT,
-            HeaderValue::from_static("HONOR-PGT-AN10_9_WeiboIntlAndroid_6710"),
-        ),
-        (header::ACCEPT_ENCODING, HeaderValue::from_static("gzip")),
-        (
-            header::CONTENT_TYPE,
-            HeaderValue::from_static("application/x-www-form-urlencoded; charset=UTF-8"),
-        ),
-        (header::HOST, HeaderValue::from_static("api.weibo.cn")),
-        (header::CONNECTION, HeaderValue::from_static("Keep-Alive")),
-    ]);
-    let client = Client::builder().default_headers(headers).build().unwrap();
+    let client = weibosdk_rs::client::new_client_with_headers().unwrap();
 
     let session = if let Ok(session) = Session::load(session_file) {
         println!("Loaded session from {}", session_file);

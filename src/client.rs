@@ -39,6 +39,26 @@ pub trait HttpClient: Send + Sync + Clone + 'static {
 }
 
 use crate::constants::config::RETRY_TIMES;
+use reqwest::header::{self, HeaderMap, HeaderValue};
+
+pub fn new_client_with_headers() -> Result<reqwest::Client> {
+    let headers = HeaderMap::from_iter([
+        (
+            header::USER_AGENT,
+            HeaderValue::from_static("HONOR-PGT-AN10_9_WeiboIntlAndroid_6710"),
+        ),
+        (header::ACCEPT_ENCODING, HeaderValue::from_static("gzip")),
+        (
+            header::CONTENT_TYPE,
+            HeaderValue::from_static("application/x-www-form-urlencoded; charset=UTF-8"),
+        ),
+        (header::HOST, HeaderValue::from_static("api.weibo.cn")),
+        (header::CONNECTION, HeaderValue::from_static("Keep-Alive")),
+    ]);
+    Ok(reqwest::Client::builder()
+        .default_headers(headers)
+        .build()?)
+}
 
 impl HttpClient for reqwest::Client {
     type Response = reqwest::Response;
