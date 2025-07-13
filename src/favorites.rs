@@ -34,20 +34,12 @@ impl<C: HttpClient> FavoritesAPI for WeiboAPI<C> {
     async fn favorites(&self, page: u32) -> Result<Vec<Post>> {
         let session = self.session();
         let s = utils::generate_s(&session.uid, FROM);
-        let params = serde_json::json!( {
-            "c": PARAM_C,
-            "count": COUNT,
-            "from": FROM,
-            "gsid": &session.gsid,
-            "lang": LANG,
-            "locale": LOCALE,
-            "mix_media_enable": MIX_MEDIA_ENABLE,
-            "page":page,
-            "s": &s,
-            "source": SOURCE,
-            "ua": UA,
-            "wm": WM,
-        });
+        let mut params = utils::build_common_params();
+        params["gsid"] = session.gsid.clone().into();
+        params["s"] = s.into();
+        params["page"] = page.into();
+        params["count"] = COUNT.into();
+        params["mix_media_enable"] = MIX_MEDIA_ENABLE.into();
 
         let response = self.client.get(URL_FAVORITES, &params).await?;
         let res = response.json::<FavoritesResponse>().await?;
@@ -73,19 +65,10 @@ impl<C: HttpClient> FavoritesAPI for WeiboAPI<C> {
     async fn favorites_destroy(&self, id: i64) -> Result<()> {
         let session = self.session();
         let s = utils::generate_s(&session.uid, FROM);
-        let params = serde_json::json!({
-            "id" :id,
-            "c": PARAM_C,
-            "from": FROM,
-            "gsid": &session.gsid,
-            "lang": LANG,
-            "locale": LOCALE,
-            "s": &s,
-            "source": SOURCE,
-            "ua": UA,
-            "wm": WM,
-
-        });
+        let mut params = utils::build_common_params();
+        params["gsid"] = session.gsid.clone().into();
+        params["s"] = s.into();
+        params["id"] = id.into();
         let _ = self.client.post(URL_FAVORITES_DESTROY, &params).await?;
         Ok(())
     }

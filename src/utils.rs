@@ -1,8 +1,23 @@
+use serde_json::{Value, json};
 use sha2::{Digest, Sha512};
+
+use crate::constants::params::{self, *};
 
 pub(crate) fn generate_s(uid: &str, from: &str) -> String {
     let pin = "CypCHG2kSlRkdvr2RG1QF8b2lCWXl7k7";
     generate_s_(uid, pin, from)
+}
+
+pub(crate) fn build_common_params() -> Value {
+    json!({
+        "c": PARAM_C,
+        "from": FROM,
+        "source": SOURCE,
+        "lang": LANG,
+        "locale": LOCALE,
+        "wm": WM,
+        "ua": UA,
+    })
 }
 
 fn generate_s_(uid: &str, pin: &str, from: &str) -> String {

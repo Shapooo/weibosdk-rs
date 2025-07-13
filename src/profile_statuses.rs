@@ -32,21 +32,13 @@ impl<C: HttpClient> ProfileStatusesAPI for WeiboAPI<C> {
     async fn profile_statuses(&self, uid: i64, page: u32) -> Result<Vec<Post>> {
         let session = self.session();
         let s = utils::generate_s(&session.uid, FROM);
-        let params = serde_json::json!({
-            "uid": uid,
-            "page": page,
-            "c": PARAM_C,
-            "count": COUNT,
-            "from": FROM,
-            "gsid": &session.gsid,
-            "lang": LANG,
-            "locale": LOCALE,
-            "mix_media_enable": MIX_MEDIA_ENABLE,
-            "s": &s,
-            "source": SOURCE,
-            "ua": UA,
-            "wm": WM,
-        });
+        let mut params = utils::build_common_params();
+        params["gsid"] = session.gsid.clone().into();
+        params["s"] = s.into();
+        params["uid"] = uid.into();
+        params["page"] = page.into();
+        params["count"] = COUNT.into();
+        params["mix_media_enable"] = MIX_MEDIA_ENABLE.into();
         let response = self.client.get(URL_PROFILE_STATUSES, &params).await?;
         let response = response.json::<ProfileStatusesResponse>().await?;
         match response {

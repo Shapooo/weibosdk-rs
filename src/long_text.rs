@@ -24,19 +24,11 @@ impl<C: HttpClient> LongTextAPI for WeiboAPI<C> {
     async fn get_long_text(&self, id: i64) -> Result<String> {
         let session = self.session();
         let s = utils::generate_s(&session.uid, FROM);
-        let params = serde_json::json!({
-            "c": PARAM_C,
-            "from": FROM,
-            "gsid": &session.gsid,
-            "lang": LANG,
-            "locale": LOCALE,
-            "s": &s,
-            "source": SOURCE,
-            "ua": UA,
-            "wm": WM,
-            "id": id,
-            "is_show_bulletin": 2,
-        });
+        let mut params = utils::build_common_params();
+        params["gsid"] = session.gsid.clone().into();
+        params["s"] = s.into();
+        params["id"] = id.into();
+        params["isGetLongText"] = 1.into();
 
         let response = self.client.get(URL_STATUSES_SHOW, &params).await?;
         let res = response.json::<LongTextResponse>().await?;
