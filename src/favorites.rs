@@ -143,3 +143,19 @@ mod tests {
         assert!(result.is_ok());
     }
 }
+
+#[cfg(test)]
+mod real_tests {
+    use super::*;
+    use crate::{client, session::Session, weibo_api::WeiboAPI};
+
+    #[tokio::test]
+    async fn test_real_favorites() {
+        let session_file = "session.json";
+        if let Ok(session) = Session::load(session_file) {
+            let client = client::new_client_with_headers().unwrap();
+            let weibo_api = WeiboAPI::new(client, session);
+            let _ = weibo_api.favorites(1).await.unwrap();
+        }
+    }
+}

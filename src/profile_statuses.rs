@@ -39,6 +39,7 @@ impl<C: HttpClient> ProfileStatusesAPI for WeiboAPI<C> {
         params["page"] = page.into();
         params["count"] = COUNT.into();
         params["mix_media_enable"] = MIX_MEDIA_ENABLE.into();
+        params["containerid"] = format!("230413{}_-_WEIBO_SECOND_PROFILE_WEIBO", uid).into();
         let response = self.client.get(URL_PROFILE_STATUSES, &params).await?;
         let response = response.json::<ProfileStatusesResponse>().await?;
         match response {
@@ -106,5 +107,22 @@ mod tests {
 
         let posts = weibo_api.profile_statuses(12345, 1).await.unwrap();
         assert_eq!(posts, expect_posts);
+    }
+}
+
+#[cfg(test)]
+mod real_tests {
+    use super::*;
+    use crate::{client, session::Session, weibo_api::WeiboAPI};
+
+    #[tokio::test]
+    async fn test_real_profile_statuses() {
+        let session_file = "session.json";
+        if let Ok(session) = Session::load(session_file) {
+            let client = client::new_client_with_headers().unwrap();
+            let weibo_api = WeiboAPI::new(client, session);
+            let posts = weibo_api.profile_statuses(1401527553, 1).await.unwrap();
+            assert!(!posts.is_empty());
+        }
     }
 }

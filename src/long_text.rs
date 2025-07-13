@@ -80,3 +80,20 @@ mod tests {
         assert_eq!(long_text, expect_long_text);
     }
 }
+
+#[cfg(test)]
+mod real_tests {
+    use super::*;
+    use crate::{client, session::Session, weibo_api::WeiboAPI};
+
+    #[tokio::test]
+    async fn test_real_get_long_text() {
+        let session_file = "session.json";
+        if let Ok(session) = Session::load(session_file) {
+            let client = client::new_client_with_headers().unwrap();
+            let weibo_api = WeiboAPI::new(client, session);
+            let long_text = weibo_api.get_long_text(5179586393932632).await.unwrap();
+            assert!(!long_text.is_empty());
+        }
+    }
+}
