@@ -1,11 +1,20 @@
 #![allow(async_fn_in_trait)]
-use anyhow::Result;
+use anyhow::{Result, anyhow};
+use serde::Deserialize;
 
 use crate::client::{HttpClient, HttpResponse};
 use crate::constants::{params::*, urls::URL_STATUSES_SHOW};
+use crate::err_response::ErrResponse;
 use crate::internal::statuses_show::StatusesShow;
 use crate::utils;
 use crate::weibo_api::WeiboAPI;
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum LongTextResponse {
+    Succ(StatusesShow),
+    Fail(ErrResponse),
+}
 
 pub trait LongTextAPI {
     async fn get_long_text(&self, id: i64) -> Result<String>;
@@ -30,8 +39,16 @@ impl<C: HttpClient> LongTextAPI for WeiboAPI<C> {
         });
 
         let response = self.client.get(URL_STATUSES_SHOW, &params).await?;
-        let res = response.json::<StatusesShow>().await?;
-        Ok(res.long_text.content)
+        let res = response.json::<LongTextResponse>().await?;
+        match res {
+            LongTextResponse::Succ(statuses_show) => Ok(statuses_show.long_text.content),
+            LongTextResponse::Fail(err) => Err(anyhow!(
+                "api call error: {}, {}, {}",
+                err.errno,
+                err.errmsg,
+                err.errtype
+            )),
+        }
     }
 }
 

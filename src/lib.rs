@@ -4,12 +4,12 @@ pub mod error;
 pub mod favorites;
 pub mod login;
 pub mod long_text;
+pub mod picture;
 pub mod post;
 pub mod profile_statuses;
 pub mod session;
 pub mod user;
 pub mod weibo_api;
-pub mod picture;
 
 mod constants;
 mod internal;

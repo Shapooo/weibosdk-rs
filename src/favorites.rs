@@ -1,5 +1,5 @@
 #![allow(async_fn_in_trait)]
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use serde::Deserialize;
 
 use crate::Post;
@@ -8,6 +8,7 @@ use crate::constants::{
     params::*,
     urls::{URL_FAVORITES, URL_FAVORITES_DESTROY},
 };
+use crate::err_response::ErrResponse;
 use crate::internal::post::PostInternal;
 use crate::utils;
 use crate::weibo_api::WeiboAPI;
@@ -18,8 +19,10 @@ struct FavoritesPost {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-struct FavoritesResponse {
-    pub favorites: Vec<FavoritesPost>,
+#[serde(untagged)]
+enum FavoritesResponse {
+    Succ { favorites: Vec<FavoritesPost> },
+    Fail(ErrResponse),
 }
 
 pub trait FavoritesAPI {
@@ -48,12 +51,21 @@ impl<C: HttpClient> FavoritesAPI for WeiboAPI<C> {
 
         let response = self.client.get(URL_FAVORITES, &params).await?;
         let res = response.json::<FavoritesResponse>().await?;
-        let posts = res
-            .favorites
-            .into_iter()
-            .map(|post| post.status.try_into())
-            .collect::<Result<Vec<Post>>>()?;
-        Ok(posts)
+        match res {
+            FavoritesResponse::Succ { favorites } => {
+                let posts = favorites
+                    .into_iter()
+                    .map(|post| post.status.try_into())
+                    .collect::<Result<Vec<Post>>>()?;
+                Ok(posts)
+            }
+            FavoritesResponse::Fail(err) => Err(anyhow!(
+                "api call error: {}, {}, {}",
+                err.errno,
+                err.errmsg,
+                err.errtype
+            )),
+        }
     }
 
     async fn favorites_destroy(&self, id: i64) -> Result<()> {
@@ -107,13 +119,16 @@ mod tests {
         testcase_file
             .read_to_string(&mut mock_response_body)
             .unwrap();
-        let expect_posts = serde_json::from_str::<FavoritesResponse>(&mock_response_body)
-            .unwrap()
-            .favorites
-            .into_iter()
-            .map(|post| post.status.try_into())
-            .collect::<Result<Vec<Post>>>()
-            .unwrap();
+        let res = serde_json::from_str::<FavoritesResponse>(&mock_response_body).unwrap();
+        let expect_posts = match res {
+            FavoritesResponse::Succ { favorites } => favorites
+                .into_iter()
+                .map(|post| post.status.try_into())
+                .collect::<Result<Vec<Post>>>()
+                .unwrap(),
+            FavoritesResponse::Fail(_) => panic!("unexpected fail response"),
+        };
+
         let mock_response = MockHttpResponse::new(200, &mock_response_body);
         mock_client.expect_get(URL_FAVORITES, mock_response);
 

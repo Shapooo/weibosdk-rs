@@ -1,10 +1,11 @@
 #![allow(async_fn_in_trait)]
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use serde::Deserialize;
 
 use crate::Post;
 use crate::client::{HttpClient, HttpResponse};
 use crate::constants::{params::*, urls::*};
+use crate::err_response::ErrResponse;
 use crate::internal::post::PostInternal;
 use crate::utils;
 use crate::weibo_api::WeiboAPI;
@@ -17,8 +18,10 @@ struct Card {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-struct ProfileStatusesResponse {
-    cards: Vec<Card>,
+#[serde(untagged)]
+enum ProfileStatusesResponse {
+    Succ { cards: Vec<Card> },
+    Fail(ErrResponse),
 }
 
 pub trait ProfileStatusesAPI {
@@ -46,12 +49,19 @@ impl<C: HttpClient> ProfileStatusesAPI for WeiboAPI<C> {
         });
         let response = self.client.get(URL_PROFILE_STATUSES, &params).await?;
         let response = response.json::<ProfileStatusesResponse>().await?;
-        Ok(response
-            .cards
-            .into_iter()
-            .filter_map(|card| card.mblog)
-            .map(|post| post.try_into())
-            .collect::<Result<Vec<Post>>>()?)
+        match response {
+            ProfileStatusesResponse::Succ { cards } => Ok(cards
+                .into_iter()
+                .filter_map(|card| card.mblog)
+                .map(|post| post.try_into())
+                .collect::<Result<Vec<Post>>>()?),
+            ProfileStatusesResponse::Fail(err) => Err(anyhow!(
+                "api call error: {}, {}, {}",
+                err.errno,
+                err.errmsg,
+                err.errtype
+            )),
+        }
     }
 }
 
@@ -85,14 +95,17 @@ mod tests {
         testcase_file
             .read_to_string(&mut mock_response_body)
             .unwrap();
-        let expect_posts = serde_json::from_str::<ProfileStatusesResponse>(&mock_response_body)
-            .unwrap()
-            .cards
-            .into_iter()
-            .filter_map(|card| card.mblog)
-            .map(|card| card.try_into())
-            .collect::<Result<Vec<Post>>>()
-            .unwrap();
+        let res = serde_json::from_str::<ProfileStatusesResponse>(&mock_response_body).unwrap();
+        let expect_posts = match res {
+            ProfileStatusesResponse::Succ { cards } => cards
+                .into_iter()
+                .filter_map(|card| card.mblog)
+                .map(|card| card.try_into())
+                .collect::<Result<Vec<Post>>>()
+                .unwrap(),
+            ProfileStatusesResponse::Fail(_) => panic!("unexpected fail response"),
+        };
+
         let mock_response = MockHttpResponse::new(200, &mock_response_body);
         mock_client.expect_get(URL_PROFILE_STATUSES, mock_response);
 
