@@ -26,10 +26,19 @@ enum ProfileStatusesResponse {
 
 pub trait ProfileStatusesAPI {
     async fn profile_statuses(&self, uid: i64, page: u32) -> Result<Vec<Post>>;
+    async fn profile_statuses_original(&self, uid: i64, page: u32) -> Result<Vec<Post>>;
+    async fn profile_statuses_picture(&self, uid: i64, page: u32) -> Result<Vec<Post>>;
+    async fn profile_statuses_video(&self, uid: i64, page: u32) -> Result<Vec<Post>>;
+    async fn profile_statuses_article(&self, uid: i64, page: u32) -> Result<Vec<Post>>;
 }
 
-impl<C: HttpClient> ProfileStatusesAPI for WeiboAPIImpl<C> {
-    async fn profile_statuses(&self, uid: i64, page: u32) -> Result<Vec<Post>> {
+impl<C: HttpClient> WeiboAPIImpl<C> {
+    async fn get_profile_statuses(
+        &self,
+        uid: i64,
+        page: u32,
+        containerid: String,
+    ) -> Result<Vec<Post>> {
         let session = self.session();
         let s = utils::generate_s(&session.uid, FROM);
         let mut params = utils::build_common_params();
@@ -39,7 +48,7 @@ impl<C: HttpClient> ProfileStatusesAPI for WeiboAPIImpl<C> {
         params["page"] = page.into();
         params["count"] = COUNT.into();
         params["mix_media_enable"] = MIX_MEDIA_ENABLE.into();
-        params["containerid"] = format!("230413{}_-_WEIBO_SECOND_PROFILE_WEIBO", uid).into();
+        params["containerid"] = containerid.into();
         let response = self.client.get(URL_PROFILE_STATUSES, &params).await?;
         let response = response.json::<ProfileStatusesResponse>().await?;
         match response {
@@ -54,6 +63,33 @@ impl<C: HttpClient> ProfileStatusesAPI for WeiboAPIImpl<C> {
                 .collect::<Result<Vec<Post>>>()?),
             ProfileStatusesResponse::Fail(err) => Err(Error::ApiError(err)),
         }
+    }
+}
+
+impl<C: HttpClient> ProfileStatusesAPI for WeiboAPIImpl<C> {
+    async fn profile_statuses(&self, uid: i64, page: u32) -> Result<Vec<Post>> {
+        let containerid = format!("230413{}_-_WEIBO_SECOND_PROFILE_WEIBO", uid);
+        self.get_profile_statuses(uid, page, containerid).await
+    }
+
+    async fn profile_statuses_original(&self, uid: i64, page: u32) -> Result<Vec<Post>> {
+        let containerid = format!("230413{}_-_WEIBO_SECOND_PROFILE_WEIBO_ORI", uid);
+        self.get_profile_statuses(uid, page, containerid).await
+    }
+
+    async fn profile_statuses_picture(&self, uid: i64, page: u32) -> Result<Vec<Post>> {
+        let containerid = format!("230413{}_-_WEIBO_SECOND_PROFILE_WEIBO_PIC", uid);
+        self.get_profile_statuses(uid, page, containerid).await
+    }
+
+    async fn profile_statuses_video(&self, uid: i64, page: u32) -> Result<Vec<Post>> {
+        let containerid = format!("230413{}_-_WEIBO_SECOND_PROFILE_WEIBO_VIDEO", uid);
+        self.get_profile_statuses(uid, page, containerid).await
+    }
+
+    async fn profile_statuses_article(&self, uid: i64, page: u32) -> Result<Vec<Post>> {
+        let containerid = format!("230413{}_-_WEIBO_SECOND_PROFILE_WEIBO_ARTICAL", uid);
+        self.get_profile_statuses(uid, page, containerid).await
     }
 }
 
