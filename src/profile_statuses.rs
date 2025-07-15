@@ -38,6 +38,7 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
         uid: i64,
         page: u32,
         containerid: String,
+        filter_likes: bool,
     ) -> Result<Vec<Post>> {
         let session = self.session();
         let s = utils::generate_s(&session.uid, FROM);
@@ -52,15 +53,26 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
         let response = self.client.get(URL_PROFILE_STATUSES, &params).await?;
         let response = response.json::<ProfileStatusesResponse>().await?;
         match response {
-            ProfileStatusesResponse::Succ { cards } => Ok(cards
-                .into_iter()
-                .filter_map(|card| card.mblog)
-                .map(|post| {
+            ProfileStatusesResponse::Succ { cards } => {
+                let posts_iterator = cards.into_iter().filter_map(|card| card.mblog);
+
+                let map_to_post = |post: PostInternal| {
                     post.try_into().map_err(|e: Error| {
                         Error::DataConversionError(format!("post internal to post failed: {}", e))
                     })
-                })
-                .collect::<Result<Vec<Post>>>()?),
+                };
+
+                if filter_likes {
+                    posts_iterator
+                        .filter(|post| post.user.as_ref().is_none_or(|u| u.id == uid))
+                        .map(map_to_post)
+                        .collect::<Result<Vec<Post>>>()
+                } else {
+                    posts_iterator
+                        .map(map_to_post)
+                        .collect::<Result<Vec<Post>>>()
+                }
+            }
             ProfileStatusesResponse::Fail(err) => Err(Error::ApiError(err)),
         }
     }
@@ -69,27 +81,32 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
 impl<C: HttpClient> ProfileStatusesAPI for WeiboAPIImpl<C> {
     async fn profile_statuses(&self, uid: i64, page: u32) -> Result<Vec<Post>> {
         let containerid = format!("230413{}_-_WEIBO_SECOND_PROFILE_WEIBO", uid);
-        self.get_profile_statuses(uid, page, containerid).await
+        self.get_profile_statuses(uid, page, containerid, true)
+            .await
     }
 
     async fn profile_statuses_original(&self, uid: i64, page: u32) -> Result<Vec<Post>> {
         let containerid = format!("230413{}_-_WEIBO_SECOND_PROFILE_WEIBO_ORI", uid);
-        self.get_profile_statuses(uid, page, containerid).await
+        self.get_profile_statuses(uid, page, containerid, false)
+            .await
     }
 
     async fn profile_statuses_picture(&self, uid: i64, page: u32) -> Result<Vec<Post>> {
         let containerid = format!("230413{}_-_WEIBO_SECOND_PROFILE_WEIBO_PIC", uid);
-        self.get_profile_statuses(uid, page, containerid).await
+        self.get_profile_statuses(uid, page, containerid, false)
+            .await
     }
 
     async fn profile_statuses_video(&self, uid: i64, page: u32) -> Result<Vec<Post>> {
         let containerid = format!("230413{}_-_WEIBO_SECOND_PROFILE_WEIBO_VIDEO", uid);
-        self.get_profile_statuses(uid, page, containerid).await
+        self.get_profile_statuses(uid, page, containerid, false)
+            .await
     }
 
     async fn profile_statuses_article(&self, uid: i64, page: u32) -> Result<Vec<Post>> {
         let containerid = format!("230413{}_-_WEIBO_SECOND_PROFILE_WEIBO_ARTICAL", uid);
-        self.get_profile_statuses(uid, page, containerid).await
+        self.get_profile_statuses(uid, page, containerid, false)
+            .await
     }
 }
 
@@ -104,7 +121,7 @@ mod tests {
     };
 
     #[tokio::test]
-    async fn test_profile_statuses() {
+    async fn test_profile_statuses_ori() {
         let mock_client = MockClient::new();
         let session = Session {
             gsid: "test_gsid".to_string(),
@@ -141,7 +158,7 @@ mod tests {
         let mock_response = MockHttpResponse::new(200, &mock_response_body);
         mock_client.expect_get(URL_PROFILE_STATUSES, mock_response);
 
-        let posts = weibo_api.profile_statuses(12345, 1).await.unwrap();
+        let posts = weibo_api.profile_statuses_original(12345, 1).await.unwrap();
         assert_eq!(posts, expect_posts);
     }
 }
