@@ -52,7 +52,6 @@ pub fn new_client_with_headers() -> Result<reqwest::Client> {
             header::CONTENT_TYPE,
             HeaderValue::from_static("application/x-www-form-urlencoded; charset=UTF-8"),
         ),
-        (header::HOST, HeaderValue::from_static("api.weibo.cn")),
         (header::CONNECTION, HeaderValue::from_static("Keep-Alive")),
     ]);
     Ok(reqwest::Client::builder()

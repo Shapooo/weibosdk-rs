@@ -12,7 +12,6 @@ class ApiTestClient:
         self.headers = {
             "User-Agent": "HONOR-PGT-AN10_9_WeiboIntlAndroid_6710",
             "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-            "Host": "api.weibo.cn",
             "Connection": "Keep-Alive",
             "Accept-Encoding": "gzip",
         }
