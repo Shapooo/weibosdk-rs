@@ -6,6 +6,7 @@ macro_rules! full_url {
 }
 
 pub mod urls {
+    pub const URL_EMOJI_UPDATE: &str = "https://weibointl.api.weibo.cn/portal.php";
     pub const URL_FAVORITES: &str = full_url!("/2/favorites");
     pub const URL_SEND_CODE: &str = full_url!("/2/account/login_sendcode");
     pub const URL_LOGIN: &str = full_url!("/2/account/login");

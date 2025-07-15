@@ -1,7 +1,16 @@
 use serde_json::{Value, json};
 use sha2::{Digest, Sha512};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::constants::params::*;
+
+pub fn get_current_timestamp_millis() -> u128 {
+    let start = SystemTime::now();
+    let since_the_epoch = start
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards");
+    since_the_epoch.as_millis()
+}
 
 pub(crate) fn generate_s(uid: &str, from: &str) -> String {
     let pin = "CypCHG2kSlRkdvr2RG1QF8b2lCWXl7k7";
