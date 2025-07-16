@@ -29,5 +29,7 @@ pub trait WeiboAPI:
     + picture::PictureDownloader
     + long_text::LongTextAPI
     + profile_statuses::ProfileStatusesAPI
+    + Send
+    + Sync
 {
 }

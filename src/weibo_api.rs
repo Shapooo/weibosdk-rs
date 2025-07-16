@@ -1,6 +1,6 @@
 use crate::{client::HttpClient, session::Session};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct WeiboAPIImpl<C: HttpClient> {
     pub client: C,
     session: Session,
