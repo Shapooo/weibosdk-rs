@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
 use chrono::{DateTime, FixedOffset};
+use serde::Serialize;
 use serde_json::Value;
 
 use crate::User;
+use crate::utils::serialize_datetime;
 
 /** 微博博文数据
  * 从微博 API 获取的每条 post 数据，原始数据为 Json 格式，包含如下字段：
@@ -40,7 +42,7 @@ use crate::User;
  * user                     json 对象，每个 post 都包含
  * visible                  json 对象，示例：“{ "type": 0, "list_id": 0 }”，每个 post 都包含
  */
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Post {
     pub id: i64,
     pub mblogid: String,
@@ -67,6 +69,7 @@ pub struct Post {
     pub geo: Option<Value>,
     pub page_info: Option<Value>,
     pub unfavorited: bool,
+    #[serde(serialize_with = "serialize_datetime")]
     pub created_at: DateTime<FixedOffset>,
     pub retweeted_status: Option<Box<Post>>,
     pub user: Option<User>,

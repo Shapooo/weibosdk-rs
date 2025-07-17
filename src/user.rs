@@ -1,3 +1,4 @@
+use serde::Serialize;
 /** 用户数据
  * 从微博 API 获取的每条 post 会附带 user 字段，原始数据为 Json 格式，包含如下字段：
  * avatar_hd            高清头像URL，字符串格式
@@ -25,7 +26,7 @@
  * 在上万份样本中只有两份出现了 vclub_member 且值都为1，所以忽略了该字段
  * 添加 backedup 字段，用于标识已经备份过的用户
  */
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct User {
     pub id: i64,
     pub screen_name: String,

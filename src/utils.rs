@@ -1,3 +1,5 @@
+use chrono::{DateTime, FixedOffset};
+use serde::Serializer;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha512};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -54,6 +56,13 @@ fn generate_s_(uid: &str, pin: &str, from: &str) -> String {
         res.push(hash1[i as usize]);
     }
     res
+}
+
+pub fn serialize_datetime<S>(dt: &DateTime<FixedOffset>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_str(&dt.to_rfc3339())
 }
 
 #[cfg(test)]
