@@ -32,5 +32,6 @@ pub trait WeiboAPI:
     + profile_statuses::ProfileStatusesAPI
     + Send
     + Sync
+    + Clone
 {
 }
