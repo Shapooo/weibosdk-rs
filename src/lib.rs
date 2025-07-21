@@ -5,7 +5,6 @@ pub mod error;
 pub mod favorites;
 pub mod login;
 pub mod long_text;
-pub mod picture;
 pub mod post;
 pub mod profile_statuses;
 pub mod session;
@@ -27,7 +26,6 @@ pub use weibo_api::WeiboAPIImpl;
 pub trait WeiboAPI:
     emoji::EmojiUpdateAPI
     + favorites::FavoritesAPI
-    + picture::PictureDownloader
     + long_text::LongTextAPI
     + profile_statuses::ProfileStatusesAPI
     + Send
