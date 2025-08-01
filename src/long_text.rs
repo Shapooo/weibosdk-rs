@@ -22,7 +22,7 @@ pub trait LongTextAPI {
 
 impl<C: HttpClient> LongTextAPI for WeiboAPIImpl<C> {
     async fn get_long_text(&self, id: i64) -> Result<String> {
-        let session = self.session();
+        let session = self.session()?;
         let s = utils::generate_s(&session.uid, FROM);
         let mut params = utils::build_common_params();
         params["gsid"] = session.gsid.clone().into();
@@ -57,7 +57,7 @@ mod tests {
             uid: "test_uid".to_string(),
             screen_name: "test_screen_name".to_string(),
         };
-        let weibo_api = WeiboAPIImpl::new(mock_client.clone(), session);
+        let weibo_api = WeiboAPIImpl::from_session(mock_client.clone(), session);
 
         let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
         let testcase_path = PathBuf::from(manifest_dir)
@@ -91,7 +91,7 @@ mod real_tests {
         let session_file = "session.json";
         if let Ok(session) = Session::load(session_file) {
             let client = client::new_client_with_headers().unwrap();
-            let weibo_api = WeiboAPIImpl::new(client, session);
+            let weibo_api = WeiboAPIImpl::from_session(client, session);
             let long_text = weibo_api.get_long_text(5179586393932632).await.unwrap();
             assert!(!long_text.is_empty());
         }

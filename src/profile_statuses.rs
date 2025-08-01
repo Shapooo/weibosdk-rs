@@ -40,7 +40,7 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
         containerid: String,
         filter_likes: bool,
     ) -> Result<Vec<Post>> {
-        let session = self.session();
+        let session = self.session()?;
         let s = utils::generate_s(&session.uid, FROM);
         let mut params = utils::build_common_params();
         params["gsid"] = session.gsid.clone().into();
@@ -128,7 +128,7 @@ mod tests {
             uid: "test_uid".to_string(),
             screen_name: "test_screen_name".to_string(),
         };
-        let weibo_api = WeiboAPIImpl::new(mock_client.clone(), session);
+        let weibo_api = WeiboAPIImpl::from_session(mock_client.clone(), session);
 
         let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
         let testcase_path = PathBuf::from(manifest_dir)
@@ -173,7 +173,7 @@ mod real_tests {
         let session_file = "session.json";
         if let Ok(session) = Session::load(session_file) {
             let client = client::new_client_with_headers().unwrap();
-            let weibo_api = WeiboAPIImpl::new(client, session);
+            let weibo_api = WeiboAPIImpl::from_session(client, session);
             let posts = weibo_api.profile_statuses(1401527553, 1).await.unwrap();
             assert!(!posts.is_empty());
         }

@@ -1,6 +1,5 @@
-use log::debug;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::json;
 
 use crate::client::{HttpClient, HttpResponse};
 use crate::constants::{
@@ -27,8 +26,6 @@ pub enum LoginState {
     LoggedIn {
         session: Session,
     },
-
-    Failed,
 }
 
 impl<C: HttpClient> WeiboAPIImpl<C> {
