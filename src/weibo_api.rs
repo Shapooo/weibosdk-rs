@@ -50,11 +50,11 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
         }
     }
 
-    pub fn session(&self) -> Option<&Session> {
+    pub fn session(&self) -> Result<&Session> {
         if let LoginState::LoggedIn { ref session } = self.login_state {
-            Some(session)
+            Ok(session)
         } else {
-            None
+            Err(Error::UnloggedIn)
         }
     }
 
@@ -77,8 +77,10 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
             if let SendCodeResponse::Fail(err) = send_code_response {
                 return Err(Error::ApiError(err));
             }
-        } // TODO: ERROR
-        Ok(())
+            Ok(())
+        } else {
+            Err(Error::UnloggedIn)
+        }
     }
 
     pub async fn login(&mut self, sms_code: &str) -> Result<()> {
@@ -94,9 +96,10 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
             });
             let session = execute_login(&self.client, &payload).await?;
             self.login_state = LoginState::LoggedIn { session };
+            Ok(())
+        } else {
+            Err(Error::UnloggedIn)
         }
-        // TODO: ERROR
-        Ok(())
     }
 
     pub async fn login_with_session(&mut self, session: Session) -> Result<()> {
@@ -114,9 +117,10 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
             });
             let session = execute_login(&self.client, &payload).await?;
             self.login_state = LoginState::LoggedIn { session };
+            Ok(())
+        } else {
+            Err(Error::UnloggedIn)
         }
-        // TODO: ERROR
-        Ok(())
     }
 }
 
@@ -178,7 +182,7 @@ mod tests {
 
         assert!(result.is_ok());
         assert!(matches!(weibo_api.login_state, LoginState::LoggedIn { .. }));
-        if let Some(session) = weibo_api.session() {
+        if let Ok(session) = weibo_api.session() {
             assert_eq!(session.gsid, "mock_gsid");
             assert_eq!(session.uid, "mock_uid");
             assert_eq!(session.screen_name, "mock_screen_name");
@@ -211,7 +215,7 @@ mod tests {
 
         assert!(result.is_ok());
         assert!(matches!(weibo_api.login_state, LoginState::LoggedIn { .. }));
-        if let Some(session) = weibo_api.session() {
+        if let Ok(session) = weibo_api.session() {
             assert_eq!(session.gsid, "new_gsid");
         } else {
             panic!("Login state should be LoggedIn");

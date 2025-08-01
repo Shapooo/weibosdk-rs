@@ -21,6 +21,9 @@ pub enum Error {
 
     #[error("I/O error: {0}")]
     IoError(#[from] std::io::Error),
+
+    #[error("Unlogged in")]
+    UnloggedIn,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
