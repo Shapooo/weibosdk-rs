@@ -30,7 +30,10 @@ impl<C: HttpClient> LongTextAPI for WeiboAPIImpl<C> {
         params["id"] = id.into();
         params["isGetLongText"] = 1.into();
 
-        let response = self.client.get(URL_STATUSES_SHOW, &params).await?;
+        let response = self
+            .client
+            .get(URL_STATUSES_SHOW, &params, self.config.retry_times)
+            .await?;
         let res = response.json::<LongTextResponse>().await?;
         match res {
             LongTextResponse::Succ(statuses_show) => Ok(statuses_show.long_text.content),

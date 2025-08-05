@@ -51,7 +51,10 @@ impl<C: HttpClient> EmojiUpdateAPI for WeiboAPIImpl<C> {
             "version": 6710,
         });
 
-        let response = self.client.get(URL_EMOJI_UPDATE, &params).await?;
+        let response = self
+            .client
+            .get(URL_EMOJI_UPDATE, &params, self.config.retry_times)
+            .await?;
         let res = response.json::<EmojiUpdateResponse>().await?;
         match res {
             EmojiUpdateResponse::Succ(data) => {

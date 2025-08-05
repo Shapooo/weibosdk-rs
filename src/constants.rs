@@ -25,11 +25,6 @@ pub mod params {
     pub const UA: &str = "HONOR-PGT-AN10_9_WeiboIntlAndroid_6710";
     pub const WM: &str = "2468_1001";
     pub const PARAM_C: &str = "weicoabroad";
-    pub const COUNT: u8 = 20;
     pub const SOURCE: &str = "4215535043";
     pub const MIX_MEDIA_ENABLE: u8 = 1;
-}
-
-pub mod config {
-    pub const RETRY_TIMES: u8 = 3;
 }

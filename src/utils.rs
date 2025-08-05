@@ -37,9 +37,7 @@ fn generate_s_(uid: &str, pin: &str, from: &str) -> String {
     hasher.update(uid);
     hasher.update(from);
     let hash1 = hasher.finalize_reset();
-    let hash1: Vec<_> = format!("{:x}", hash1).chars().collect();
-    // hasher.update(pin);
-    // let hash2 = hasher.finalize();
+    let hash1: Vec<_> = format!("{hash1:x}").chars().collect();
     let hash2 = Sha512::digest(from);
     let hash2: Vec<_> = hash2
         .into_iter()

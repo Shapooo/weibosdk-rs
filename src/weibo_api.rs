@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::client::{HttpClient, HttpResponse};
+use crate::config::Conifg;
 use crate::constants::{
     params::*,
     urls::{URL_LOGIN, URL_SEND_CODE},
@@ -13,6 +14,7 @@ use crate::session::Session;
 #[derive(Debug, Clone)]
 pub struct WeiboAPIImpl<C: HttpClient> {
     pub client: C,
+    pub config: Conifg,
     login_state: LoginState,
 }
 
@@ -29,9 +31,10 @@ pub enum LoginState {
 }
 
 impl<C: HttpClient> WeiboAPIImpl<C> {
-    pub fn new(client: C) -> Self {
+    pub fn new(client: C, config: Conifg) -> Self {
         WeiboAPIImpl {
             client,
+            config,
             login_state: Default::default(),
         }
     }
@@ -40,9 +43,11 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
         &self.login_state
     }
 
+    #[allow(unused)]
     pub(crate) fn from_session(client: C, session: Session) -> Self {
         WeiboAPIImpl {
             client,
+            config: Default::default(),
             login_state: LoginState::LoggedIn { session },
         }
     }
@@ -67,7 +72,10 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
                 "ua": UA,
                 "phone": &phone_number,
             });
-            let response = self.client.post(URL_SEND_CODE, &payload).await?;
+            let response = self
+                .client
+                .post(URL_SEND_CODE, &payload, self.config.retry_times)
+                .await?;
             self.login_state = LoginState::WaitingForCode { phone_number };
 
             let send_code_response = response.json::<SendCodeResponse>().await?;
@@ -91,7 +99,7 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
                 "phone": phone_number,
                 "smscode": sms_code,
             });
-            let session = execute_login(&self.client, &payload).await?;
+            let session = execute_login(&self.client, &payload, self.config.retry_times).await?;
             self.login_state = LoginState::LoggedIn { session };
             Ok(())
         } else {
@@ -112,7 +120,7 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
                 "from": SESSION_REFRESH_FROM,
                 "s": &crate::utils::generate_s(&session.uid, FROM),
             });
-            let session = execute_login(&self.client, &payload).await?;
+            let session = execute_login(&self.client, &payload, self.config.retry_times).await?;
             self.login_state = LoginState::LoggedIn { session };
             Ok(())
         } else {
@@ -143,7 +151,7 @@ mod tests {
             MockHttpResponse::new(200, &send_code_response_json.to_string()),
         );
 
-        let mut weibo_api = WeiboAPIImpl::new(mock_client.clone());
+        let mut weibo_api = WeiboAPIImpl::new(mock_client.clone(), Default::default());
         let result = weibo_api.get_sms_code(phone_number.clone()).await;
 
         assert!(result.is_ok());
@@ -169,6 +177,7 @@ mod tests {
         );
 
         let mut weibo_api = WeiboAPIImpl {
+            config: Default::default(),
             client: mock_client.clone(),
             login_state: LoginState::WaitingForCode {
                 phone_number: phone_number.clone(),
@@ -207,7 +216,7 @@ mod tests {
             MockHttpResponse::new(200, &login_response_json.to_string()),
         );
 
-        let mut weibo_api = WeiboAPIImpl::new(mock_client.clone());
+        let mut weibo_api = WeiboAPIImpl::new(mock_client.clone(), Default::default());
         let result = weibo_api.login_with_session(old_session).await;
 
         assert!(result.is_ok());
@@ -223,7 +232,7 @@ mod tests {
 #[derive(Debug, Deserialize, Clone)]
 #[serde(untagged)]
 enum SendCodeResponse {
-    Succ { msg: String },
+    Succ { _msg: String },
     Fail(ErrResponse),
 }
 
@@ -241,8 +250,9 @@ enum LoginResponse {
 async fn execute_login<C: HttpClient, P: Serialize + Send + Sync>(
     client: &C,
     payload: &P,
+    retry_times: u8,
 ) -> Result<Session> {
-    let response = client.post(URL_LOGIN, payload).await?;
+    let response = client.post(URL_LOGIN, payload, retry_times).await?;
 
     let response = response.json::<LoginResponse>().await?;
 

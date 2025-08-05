@@ -1,4 +1,5 @@
 pub mod client;
+pub mod config;
 pub mod emoji;
 pub mod err_response;
 pub mod error;

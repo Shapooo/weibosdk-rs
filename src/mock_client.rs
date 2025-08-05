@@ -21,6 +21,7 @@ impl MockHttpResponse {
         }
     }
 
+    #[allow(unused)]
     pub fn new_with_bytes(status: u16, body: &[u8]) -> Self {
         Self {
             status,
@@ -73,6 +74,7 @@ impl HttpClient for MockClient {
         &self,
         url: &str,
         _query: &(impl Serialize + Send + Sync),
+        _retry_times: u8,
     ) -> Result<Self::Response> {
         let responses = self.responses.lock().unwrap();
         responses.get(url).cloned().ok_or_else(|| {
@@ -84,6 +86,7 @@ impl HttpClient for MockClient {
         &self,
         url: &str,
         _form: &(impl Serialize + Send + Sync),
+        _retry_times: u8,
     ) -> Result<Self::Response> {
         let responses = self.responses.lock().unwrap();
         responses.get(url).cloned().ok_or_else(|| {
@@ -114,7 +117,7 @@ mod tests {
         mock_client.expect_post(test_url, MockHttpResponse::new(200, &expected_json));
 
         let form_data = serde_json::json!({ "key": "value" });
-        let response = mock_client.post(test_url, &form_data).await.unwrap();
+        let response = mock_client.post(test_url, &form_data, 2).await.unwrap();
 
         assert_eq!(response.status, 200);
         let received_data: TestData = response.json().await.unwrap();
@@ -127,7 +130,7 @@ mod tests {
         let test_url = "http://example.com/api/test_fail";
         let form_data = serde_json::json!({ "key": "value" });
 
-        let result = mock_client.post(test_url, &form_data).await;
+        let result = mock_client.post(test_url, &form_data, 2).await;
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err().to_string(),

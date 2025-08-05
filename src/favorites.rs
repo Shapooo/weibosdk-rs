@@ -38,10 +38,13 @@ impl<C: HttpClient> FavoritesAPI for WeiboAPIImpl<C> {
         params["gsid"] = session.gsid.clone().into();
         params["s"] = s.into();
         params["page"] = page.into();
-        params["count"] = COUNT.into();
+        params["count"] = self.config.fav_count.into();
         params["mix_media_enable"] = MIX_MEDIA_ENABLE.into();
 
-        let response = self.client.get(URL_FAVORITES, &params).await?;
+        let response = self
+            .client
+            .get(URL_FAVORITES, &params, self.config.retry_times)
+            .await?;
         let res = response.json::<FavoritesResponse>().await?;
         match res {
             FavoritesResponse::Succ { favorites } => {
@@ -49,10 +52,9 @@ impl<C: HttpClient> FavoritesAPI for WeiboAPIImpl<C> {
                     .into_iter()
                     .map(|post| {
                         post.status.try_into().map_err(|e: Error| {
-                            Error::DataConversionError(format!(
-                                "post internal to post failed: {}",
-                                e
-                            ))
+                            Error::DataConversionError(
+                                format!("post internal to post failed: {e}",),
+                            )
                         })
                     })
                     .collect::<Result<Vec<Post>>>()?;
@@ -69,7 +71,10 @@ impl<C: HttpClient> FavoritesAPI for WeiboAPIImpl<C> {
         params["gsid"] = session.gsid.clone().into();
         params["s"] = s.into();
         params["id"] = id.into();
-        let _ = self.client.post(URL_FAVORITES_DESTROY, &params).await?;
+        let _ = self
+            .client
+            .post(URL_FAVORITES_DESTROY, &params, self.config.retry_times)
+            .await?;
         Ok(())
     }
 }

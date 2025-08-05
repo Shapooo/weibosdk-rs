@@ -1,5 +1,6 @@
 #![allow(async_fn_in_trait)]
 use bytes::Bytes;
+use reqwest::header::{self, HeaderMap, HeaderValue};
 use serde::{Serialize, de::DeserializeOwned};
 
 use crate::error::{Error, Result};
@@ -30,16 +31,15 @@ pub trait HttpClient: Send + Sync + Clone + 'static {
         &self,
         url: &str,
         query: &(impl Serialize + Send + Sync),
+        retry_times: u8,
     ) -> Result<Self::Response>;
     async fn post(
         &self,
         url: &str,
         form: &(impl Serialize + Send + Sync),
+        retry_times: u8,
     ) -> Result<Self::Response>;
 }
-
-use crate::constants::config::RETRY_TIMES;
-use reqwest::header::{self, HeaderMap, HeaderValue};
 
 pub fn new_client_with_headers() -> Result<reqwest::Client> {
     let headers = HeaderMap::from_iter([
@@ -65,6 +65,7 @@ impl HttpClient for reqwest::Client {
         &self,
         url: &str,
         query: &(impl Serialize + Send + Sync),
+        retry_times: u8,
     ) -> Result<Self::Response> {
         let mut attempts = 0;
         loop {
@@ -80,7 +81,7 @@ impl HttpClient for reqwest::Client {
                     }
                 }
                 Err(e) => {
-                    if e.is_timeout() && attempts < RETRY_TIMES {
+                    if e.is_timeout() && attempts < retry_times {
                         attempts += 1;
                         continue;
                     }
@@ -94,6 +95,7 @@ impl HttpClient for reqwest::Client {
         &self,
         url: &str,
         form: &(impl Serialize + Send + Sync),
+        retry_times: u8,
     ) -> Result<Self::Response> {
         let mut attempts = 0;
         loop {
@@ -109,7 +111,7 @@ impl HttpClient for reqwest::Client {
                     }
                 }
                 Err(e) => {
-                    if e.is_timeout() && attempts < RETRY_TIMES {
+                    if e.is_timeout() && attempts < retry_times {
                         attempts += 1;
                         continue;
                     }
@@ -151,7 +153,7 @@ mod tests {
 
         let client = reqwest::Client::new();
         let form = serde_json::json!({});
-        let response = HttpClient::post(&client, &uri, &form).await.unwrap();
+        let response = HttpClient::post(&client, &uri, &form, 3).await.unwrap();
 
         let payload: TestPayload = response.json().await.unwrap();
         assert_eq!(payload, expected_response);
