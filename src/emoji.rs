@@ -96,7 +96,8 @@ mod tests {
 
         let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
         let testcase_path = PathBuf::from(manifest_dir)
-            .join("scripts")
+            .join("tests")
+            .join("data")
             .join("emoji.json");
         let mut testcase_file = std::fs::File::open(testcase_path).unwrap();
         let mut mock_response_body = String::new();
