@@ -1,4 +1,5 @@
 #![allow(async_fn_in_trait)]
+use log::{debug, error, info};
 use serde::Deserialize;
 use std::collections::HashMap;
 
@@ -41,6 +42,7 @@ pub trait EmojiUpdateAPI {
 
 impl<C: HttpClient> EmojiUpdateAPI for WeiboAPIImpl<C> {
     async fn emoji_update(&self) -> Result<HashMap<String, String>> {
+        info!("getting emoji update");
         let params = serde_json::json!({
             "ct": "util",
             "a": "expression_all",
@@ -62,9 +64,13 @@ impl<C: HttpClient> EmojiUpdateAPI for WeiboAPIImpl<C> {
                 for emoji in data.data.card {
                     emoji_map.insert(emoji.key, emoji.url);
                 }
+                debug!("emoji update success, got {} emojis", emoji_map.len());
                 Ok(emoji_map)
             }
-            EmojiUpdateResponse::Fail(err) => Err(Error::ApiError(err)),
+            EmojiUpdateResponse::Fail(err) => {
+                error!("emoji update failed: {:?}", err);
+                Err(Error::ApiError(err))
+            }
         }
     }
 }

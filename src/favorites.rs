@@ -1,17 +1,20 @@
 #![allow(async_fn_in_trait)]
+use log::{debug, error, info};
 use serde::Deserialize;
 
-use crate::Post;
-use crate::client::{HttpClient, HttpResponse};
-use crate::constants::{
-    params::*,
-    urls::{URL_FAVORITES, URL_FAVORITES_DESTROY},
+use crate::{
+    Post,
+    client::{HttpClient, HttpResponse},
+    constants::{
+        params::*,
+        urls::{URL_FAVORITES, URL_FAVORITES_DESTROY},
+    },
+    err_response::ErrResponse,
+    error::{Error, Result},
+    internal::post::PostInternal,
+    utils,
+    weibo_api::WeiboAPIImpl,
 };
-use crate::err_response::ErrResponse;
-use crate::error::{Error, Result};
-use crate::internal::post::PostInternal;
-use crate::utils;
-use crate::weibo_api::WeiboAPIImpl;
 
 #[derive(Debug, Clone, Deserialize)]
 struct FavoritesPost {
@@ -32,6 +35,7 @@ pub trait FavoritesAPI {
 
 impl<C: HttpClient> FavoritesAPI for WeiboAPIImpl<C> {
     async fn favorites(&self, page: u32) -> Result<Vec<Post>> {
+        info!("getting favorites, page: {}", page);
         let session = self.session()?;
         let s = utils::generate_s(&session.uid, FROM);
         let mut params = utils::build_common_params();
@@ -48,23 +52,26 @@ impl<C: HttpClient> FavoritesAPI for WeiboAPIImpl<C> {
         let res = response.json::<FavoritesResponse>().await?;
         match res {
             FavoritesResponse::Succ { favorites } => {
+                debug!("got {} favorites", favorites.len());
                 let posts = favorites
                     .into_iter()
                     .map(|post| {
                         post.status.try_into().map_err(|e: Error| {
-                            Error::DataConversionError(
-                                format!("post internal to post failed: {e}",),
-                            )
+                            Error::DataConversionError(format!("post internal to post failed: {e}"))
                         })
                     })
                     .collect::<Result<Vec<Post>>>()?;
                 Ok(posts)
             }
-            FavoritesResponse::Fail(err) => Err(Error::ApiError(err)),
+            FavoritesResponse::Fail(err) => {
+                error!("failed to get favorites: {:?}", err);
+                Err(Error::ApiError(err))
+            }
         }
     }
 
     async fn favorites_destroy(&self, id: i64) -> Result<()> {
+        info!("destroying favorite, id: {}", id);
         let session = self.session()?;
         let s = utils::generate_s(&session.uid, FROM);
         let mut params = utils::build_common_params();
@@ -75,6 +82,7 @@ impl<C: HttpClient> FavoritesAPI for WeiboAPIImpl<C> {
             .client
             .post(URL_FAVORITES_DESTROY, &params, self.config.retry_times)
             .await?;
+        debug!("favorite {} destroyed", id);
         Ok(())
     }
 }

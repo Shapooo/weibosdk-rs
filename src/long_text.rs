@@ -1,13 +1,16 @@
 #![allow(async_fn_in_trait)]
+use log::{debug, error, info};
 use serde::Deserialize;
 
-use crate::client::{HttpClient, HttpResponse};
-use crate::constants::{params::*, urls::URL_STATUSES_SHOW};
-use crate::err_response::ErrResponse;
-use crate::error::{Error, Result};
-use crate::internal::statuses_show::StatusesShow;
-use crate::utils;
-use crate::weibo_api::WeiboAPIImpl;
+use crate::{
+    client::{HttpClient, HttpResponse},
+    constants::{params::*, urls::URL_STATUSES_SHOW},
+    err_response::ErrResponse,
+    error::{Error, Result},
+    internal::statuses_show::StatusesShow,
+    utils,
+    weibo_api::WeiboAPIImpl,
+};
 
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
@@ -22,6 +25,7 @@ pub trait LongTextAPI {
 
 impl<C: HttpClient> LongTextAPI for WeiboAPIImpl<C> {
     async fn get_long_text(&self, id: i64) -> Result<String> {
+        info!("getting long text, id: {}", id);
         let session = self.session()?;
         let s = utils::generate_s(&session.uid, FROM);
         let mut params = utils::build_common_params();
@@ -36,8 +40,14 @@ impl<C: HttpClient> LongTextAPI for WeiboAPIImpl<C> {
             .await?;
         let res = response.json::<LongTextResponse>().await?;
         match res {
-            LongTextResponse::Succ(statuses_show) => Ok(statuses_show.long_text.content),
-            LongTextResponse::Fail(err) => Err(Error::ApiError(err)),
+            LongTextResponse::Succ(statuses_show) => {
+                debug!("got long text success");
+                Ok(statuses_show.long_text.content)
+            }
+            LongTextResponse::Fail(err) => {
+                error!("failed to get long text: {:?}", err);
+                Err(Error::ApiError(err))
+            }
         }
     }
 }

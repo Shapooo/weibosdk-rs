@@ -1,15 +1,18 @@
+use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::client::{HttpClient, HttpResponse};
-use crate::config::Conifg;
-use crate::constants::{
-    params::*,
-    urls::{URL_LOGIN, URL_SEND_CODE},
+use crate::{
+    client::{HttpClient, HttpResponse},
+    config::Conifg,
+    constants::{
+        params::*,
+        urls::{URL_LOGIN, URL_SEND_CODE},
+    },
+    err_response::ErrResponse,
+    error::{Error, Result},
+    session::Session,
 };
-use crate::err_response::ErrResponse;
-use crate::error::{Error, Result};
-use crate::session::Session;
 
 #[derive(Debug, Clone)]
 pub struct WeiboAPIImpl<C: HttpClient> {
@@ -32,6 +35,7 @@ pub enum LoginState {
 
 impl<C: HttpClient> WeiboAPIImpl<C> {
     pub fn new(client: C, config: Conifg) -> Self {
+        info!("WeiboAPIImpl created");
         WeiboAPIImpl {
             client,
             config,
@@ -45,6 +49,10 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
 
     #[allow(unused)]
     pub(crate) fn from_session(client: C, session: Session) -> Self {
+        info!(
+            "WeiboAPIImpl created from session for user {}",
+            session.screen_name
+        );
         WeiboAPIImpl {
             client,
             config: Default::default(),
@@ -56,11 +64,13 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
         if let LoginState::LoggedIn { ref session } = self.login_state {
             Ok(session)
         } else {
-            Err(Error::UnloggedIn)
+            warn!("session() called before login");
+            Err(Error::NotLoggedIn)
         }
     }
 
     pub async fn get_sms_code(&mut self, phone_number: String) -> Result<()> {
+        info!("getting sms code for phone number: {}", &phone_number);
         if let LoginState::Init = self.login_state {
             let payload = json!( {
                 "c": PARAM_C,
@@ -79,16 +89,24 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
             self.login_state = LoginState::WaitingForCode { phone_number };
 
             let send_code_response = response.json::<SendCodeResponse>().await?;
-            if let SendCodeResponse::Fail(err) = send_code_response {
-                return Err(Error::ApiError(err));
+            match send_code_response {
+                SendCodeResponse::Succ { msg } => {
+                    debug!("sms code sent successfully, get msg {msg}",);
+                    Ok(())
+                }
+                SendCodeResponse::Fail(err) => {
+                    error!("failed to get sms code: {:?}", err);
+                    Err(Error::ApiError(err))
+                }
             }
-            Ok(())
         } else {
-            Err(Error::UnloggedIn)
+            error!("get_sms_code called in invalid state");
+            Err(Error::NotLoggedIn)
         }
     }
 
     pub async fn login(&mut self, sms_code: &str) -> Result<()> {
+        info!("logging in with sms code");
         if let LoginState::WaitingForCode { phone_number } = &self.login_state {
             let payload = json!({
                 "c": PARAM_C,
@@ -100,14 +118,17 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
                 "smscode": sms_code,
             });
             let session = execute_login(&self.client, &payload, self.config.retry_times).await?;
+            info!("login success, user: {}", session.screen_name);
             self.login_state = LoginState::LoggedIn { session };
             Ok(())
         } else {
-            Err(Error::UnloggedIn)
+            error!("login called in invalid state");
+            Err(Error::NotLoggedIn)
         }
     }
 
     pub async fn login_with_session(&mut self, session: Session) -> Result<()> {
+        info!("logging in with session for user {}", session.screen_name);
         if let LoginState::Init = self.login_state {
             let payload = json!({
                 "c": PARAM_C,
@@ -121,10 +142,12 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
                 "s": &crate::utils::generate_s(&session.uid, FROM),
             });
             let session = execute_login(&self.client, &payload, self.config.retry_times).await?;
+            info!("login with session success, user: {}", session.screen_name);
             self.login_state = LoginState::LoggedIn { session };
             Ok(())
         } else {
-            Err(Error::UnloggedIn)
+            error!("login_with_session called in invalid state");
+            Err(Error::NotLoggedIn)
         }
     }
 }
@@ -152,9 +175,8 @@ mod tests {
         );
 
         let mut weibo_api = WeiboAPIImpl::new(mock_client.clone(), Default::default());
-        let result = weibo_api.get_sms_code(phone_number.clone()).await;
+        weibo_api.get_sms_code(phone_number.clone()).await.unwrap();
 
-        assert!(result.is_ok());
         assert!(
             matches!(weibo_api.login_state, LoginState::WaitingForCode { phone_number: num } if num == phone_number)
         );
@@ -232,7 +254,7 @@ mod tests {
 #[derive(Debug, Deserialize, Clone)]
 #[serde(untagged)]
 enum SendCodeResponse {
-    Succ { _msg: String },
+    Succ { msg: String },
     Fail(ErrResponse),
 }
 

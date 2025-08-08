@@ -23,7 +23,7 @@ pub enum Error {
     IoError(#[from] std::io::Error),
 
     #[error("Unlogged in")]
-    UnloggedIn,
+    NotLoggedIn,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

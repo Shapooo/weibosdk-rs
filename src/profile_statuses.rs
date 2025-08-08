@@ -1,14 +1,17 @@
 #![allow(async_fn_in_trait)]
+use log::{debug, error, info};
 use serde::Deserialize;
 
-use crate::Post;
-use crate::client::{HttpClient, HttpResponse};
-use crate::constants::{params::*, urls::*};
-use crate::err_response::ErrResponse;
-use crate::error::{Error, Result};
-use crate::internal::post::PostInternal;
-use crate::utils;
-use crate::weibo_api::WeiboAPIImpl;
+use crate::{
+    Post,
+    client::{HttpClient, HttpResponse},
+    constants::{params::*, urls::*},
+    err_response::ErrResponse,
+    error::{Error, Result},
+    internal::post::PostInternal,
+    utils,
+    weibo_api::WeiboAPIImpl,
+};
 
 #[derive(Debug, Clone, Deserialize)]
 struct Card {
@@ -40,6 +43,12 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
         containerid: String,
         filter_likes: bool,
     ) -> Result<Vec<Post>> {
+        info!(
+            "getting profile statuses, uid: {}, page: {}, containerid: {}",
+            uid,
+            page,
+            containerid.clone()
+        );
         let session = self.session()?;
         let s = utils::generate_s(&session.uid, FROM);
         let mut params = utils::build_common_params();
@@ -57,6 +66,7 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
         let response = response.json::<ProfileStatusesResponse>().await?;
         match response {
             ProfileStatusesResponse::Succ { cards } => {
+                debug!("got {} cards", cards.len());
                 let posts_iterator = cards.into_iter().filter_map(|card| card.mblog);
 
                 let map_to_post = |post: PostInternal| {
@@ -76,7 +86,10 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
                         .collect::<Result<Vec<Post>>>()
                 }
             }
-            ProfileStatusesResponse::Fail(err) => Err(Error::ApiError(err)),
+            ProfileStatusesResponse::Fail(err) => {
+                error!("failed to get profile statuses: {:?}", err);
+                Err(Error::ApiError(err))
+            }
         }
     }
 }
