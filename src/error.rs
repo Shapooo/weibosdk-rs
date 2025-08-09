@@ -16,9 +16,6 @@ pub enum Error {
     #[error("Failed to convert data: {0}")]
     DataConversionError(String),
 
-    #[error("Login failed: {0}")]
-    LoginError(String),
-
     #[error("I/O error: {0}")]
     IoError(#[from] std::io::Error),
 

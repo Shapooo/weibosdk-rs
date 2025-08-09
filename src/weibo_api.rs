@@ -288,6 +288,6 @@ async fn execute_login<C: HttpClient, P: Serialize + Send + Sync>(
             uid,
             screen_name,
         }),
-        LoginResponse::Fail(err_res) => Err(Error::LoginError(err_res.errmsg)),
+        LoginResponse::Fail(err_res) => Err(Error::ApiError(err_res)),
     }
 }
