@@ -69,11 +69,7 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
                 debug!("got {} cards", cards.len());
                 let posts_iterator = cards.into_iter().filter_map(|card| card.mblog);
 
-                let map_to_post = |post: PostInternal| {
-                    post.try_into().map_err(|e: Error| {
-                        Error::DataConversionError(format!("post internal to post failed: {e}"))
-                    })
-                };
+                let map_to_post = |post: PostInternal| post.try_into();
 
                 if filter_likes {
                     posts_iterator
@@ -161,11 +157,7 @@ mod tests {
             ProfileStatusesResponse::Succ { cards } => cards
                 .into_iter()
                 .filter_map(|card| card.mblog)
-                .map(|card| {
-                    card.try_into().map_err(|e: Error| {
-                        Error::DataConversionError(format!("post internal to post failed: {}", e))
-                    })
-                })
+                .map(|card| card.try_into())
                 .collect::<Result<Vec<Post>>>()
                 .unwrap(),
             ProfileStatusesResponse::Fail(_) => panic!("unexpected fail response"),

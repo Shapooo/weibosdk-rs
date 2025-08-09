@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use crate::client::{HttpClient, HttpResponse};
+use crate::err_response::ErrResponse;
 use crate::error::{Error, Result};
 
 #[derive(Debug, Clone)]
@@ -78,7 +79,10 @@ impl HttpClient for MockClient {
     ) -> Result<Self::Response> {
         let responses = self.responses.lock().unwrap();
         responses.get(url).cloned().ok_or_else(|| {
-            Error::DataConversionError(format!("No mock response set for URL: {}", url))
+            Error::ApiError(ErrResponse {
+                errmsg: format!("No mock response set for URL: {}", url),
+                ..Default::default()
+            })
         })
     }
 
@@ -90,7 +94,10 @@ impl HttpClient for MockClient {
     ) -> Result<Self::Response> {
         let responses = self.responses.lock().unwrap();
         responses.get(url).cloned().ok_or_else(|| {
-            Error::DataConversionError(format!("No mock response set for URL: {}", url))
+            Error::ApiError(ErrResponse {
+                errmsg: format!("No mock response set for URL: {}", url),
+                ..Default::default()
+            })
         })
     }
 }

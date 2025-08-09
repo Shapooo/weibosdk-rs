@@ -55,11 +55,7 @@ impl<C: HttpClient> FavoritesAPI for WeiboAPIImpl<C> {
                 debug!("got {} favorites", favorites.len());
                 let posts = favorites
                     .into_iter()
-                    .map(|post| {
-                        post.status.try_into().map_err(|e: Error| {
-                            Error::DataConversionError(format!("post internal to post failed: {e}"))
-                        })
-                    })
+                    .map(|post| post.status.try_into())
                     .collect::<Result<Vec<Post>>>()?;
                 Ok(posts)
             }
@@ -121,11 +117,7 @@ mod tests {
         let expect_posts = match res {
             FavoritesResponse::Succ { favorites } => favorites
                 .into_iter()
-                .map(|post| {
-                    post.status.try_into().map_err(|e: Error| {
-                        Error::DataConversionError(format!("post internal to post failed: {}", e))
-                    })
-                })
+                .map(|post| post.status.try_into())
                 .collect::<Result<Vec<Post>>>()
                 .unwrap(),
             FavoritesResponse::Fail(_) => panic!("unexpected fail response"),
