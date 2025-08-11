@@ -83,7 +83,7 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
                 }
             }
             ProfileStatusesResponse::Fail(err) => {
-                error!("failed to get profile statuses: {:?}", err);
+                error!("failed to get profile statuses: {err:?}");
                 Err(Error::ApiError(err))
             }
         }

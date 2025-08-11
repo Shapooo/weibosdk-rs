@@ -70,7 +70,7 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
     }
 
     pub async fn get_sms_code(&mut self, phone_number: String) -> Result<()> {
-        info!("getting sms code for phone number: {}", &phone_number);
+        info!("getting sms code for phone number: {phone_number}");
         if let LoginState::Init = self.login_state {
             let payload = json!( {
                 "c": PARAM_C,
@@ -95,7 +95,7 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
                     Ok(())
                 }
                 SendCodeResponse::Fail(err) => {
-                    error!("failed to get sms code: {:?}", err);
+                    error!("failed to get sms code: {err:?}");
                     Err(Error::ApiError(err))
                 }
             }

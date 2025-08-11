@@ -35,7 +35,7 @@ pub trait FavoritesAPI {
 
 impl<C: HttpClient> FavoritesAPI for WeiboAPIImpl<C> {
     async fn favorites(&self, page: u32) -> Result<Vec<Post>> {
-        info!("getting favorites, page: {}", page);
+        info!("getting favorites, page: {page}");
         let session = self.session()?;
         let s = utils::generate_s(&session.uid, FROM);
         let mut params = utils::build_common_params();
@@ -60,14 +60,14 @@ impl<C: HttpClient> FavoritesAPI for WeiboAPIImpl<C> {
                 Ok(posts)
             }
             FavoritesResponse::Fail(err) => {
-                error!("failed to get favorites: {:?}", err);
+                error!("failed to get favorites: {err:?}");
                 Err(Error::ApiError(err))
             }
         }
     }
 
     async fn favorites_destroy(&self, id: i64) -> Result<()> {
-        info!("destroying favorite, id: {}", id);
+        info!("destroying favorite, id: {id}");
         let session = self.session()?;
         let s = utils::generate_s(&session.uid, FROM);
         let mut params = utils::build_common_params();
@@ -78,7 +78,7 @@ impl<C: HttpClient> FavoritesAPI for WeiboAPIImpl<C> {
             .client
             .post(URL_FAVORITES_DESTROY, &params, self.config.retry_times)
             .await?;
-        debug!("favorite {} destroyed", id);
+        debug!("favorite {id} destroyed");
         Ok(())
     }
 }

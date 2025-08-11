@@ -70,7 +70,7 @@ impl HttpClient for reqwest::Client {
         retry_times: u8,
     ) -> Result<Self::Response> {
         let mut attempts = 0;
-        debug!("Sending GET request to {}", url);
+        debug!("Sending GET request to {url}");
         trace!(
             "GET request query: {}",
             serde_json::to_string_pretty(query).unwrap_or_default()
@@ -80,7 +80,7 @@ impl HttpClient for reqwest::Client {
             match result {
                 Ok(response) => {
                     if response.status().is_success() {
-                        debug!("GET request to {} success", url);
+                        debug!("GET request to {url} success");
                         return Ok(response);
                     } else {
                         error!(
@@ -94,10 +94,10 @@ impl HttpClient for reqwest::Client {
                     }
                 }
                 Err(e) => {
-                    error!("GET request to {} failed with error: {}", url, e);
+                    error!("GET request to {url} failed with error: {e}");
                     if e.is_timeout() && attempts < retry_times {
                         attempts += 1;
-                        debug!("Retrying GET request to {}, attempt {}", url, attempts);
+                        debug!("Retrying GET request to {url}, attempt {attempts}");
                         continue;
                     }
                     return Err(e.into());
@@ -113,7 +113,7 @@ impl HttpClient for reqwest::Client {
         retry_times: u8,
     ) -> Result<Self::Response> {
         let mut attempts = 0;
-        debug!("Sending POST request to {}", url);
+        debug!("Sending POST request to {url}");
         trace!(
             "POST request form: {}",
             serde_json::to_string_pretty(form).unwrap_or_default()
@@ -123,7 +123,7 @@ impl HttpClient for reqwest::Client {
             match result {
                 Ok(response) => {
                     if response.status().is_success() {
-                        debug!("POST request to {} success", url);
+                        debug!("POST request to {url} success");
                         return Ok(response);
                     } else {
                         error!(
@@ -137,10 +137,10 @@ impl HttpClient for reqwest::Client {
                     }
                 }
                 Err(e) => {
-                    error!("POST request to {} failed with error: {}", url, e);
+                    error!("POST request to {url} failed with error: {e}");
                     if e.is_timeout() && attempts < retry_times {
                         attempts += 1;
-                        debug!("Retrying POST request to {}, attempt {}", url, attempts);
+                        debug!("Retrying POST request to {url}, attempt {attempts}");
                         continue;
                     }
                     return Err(e.into());

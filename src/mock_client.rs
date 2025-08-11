@@ -11,6 +11,7 @@ use crate::error::{Error, Result};
 
 #[derive(Debug, Clone)]
 pub struct MockHttpResponse {
+    #[allow(unused)]
     status: u16,
     body: Bytes,
 }

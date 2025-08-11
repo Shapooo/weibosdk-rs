@@ -68,7 +68,7 @@ impl<C: HttpClient> EmojiUpdateAPI for WeiboAPIImpl<C> {
                 Ok(emoji_map)
             }
             EmojiUpdateResponse::Fail(err) => {
-                error!("emoji update failed: {:?}", err);
+                error!("emoji update failed: {err:?}");
                 Err(Error::ApiError(err))
             }
         }
