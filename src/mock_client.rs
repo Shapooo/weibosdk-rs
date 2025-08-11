@@ -2,10 +2,11 @@ use bytes::Bytes;
 use serde::{Serialize, de::DeserializeOwned};
 
 use std::collections::HashMap;
+use std::fs;
 use std::sync::{Arc, Mutex};
 
 use crate::client::{HttpClient, HttpResponse};
-use crate::err_response::ErrResponse;
+use crate::constants::urls::*;
 use crate::error::{Error, Result};
 
 #[derive(Debug, Clone)]
@@ -22,12 +23,8 @@ impl MockHttpResponse {
         }
     }
 
-    #[allow(unused)]
-    pub fn new_with_bytes(status: u16, body: &[u8]) -> Self {
-        Self {
-            status,
-            body: Bytes::from(body.to_vec()),
-        }
+    pub fn new_with_bytes(status: u16, body: Bytes) -> Self {
+        Self { status, body }
     }
 }
 
@@ -45,16 +42,14 @@ impl HttpResponse for MockHttpResponse {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct MockClient {
     responses: Arc<Mutex<HashMap<String, MockHttpResponse>>>,
 }
 
 impl MockClient {
     pub fn new() -> Self {
-        Self {
-            responses: Arc::new(Mutex::new(HashMap::new())),
-        }
+        Default::default()
     }
 
     pub fn expect_get(&self, url: &str, response: MockHttpResponse) {
@@ -65,6 +60,82 @@ impl MockClient {
     pub fn expect_post(&self, url: &str, response: MockHttpResponse) {
         let mut responses = self.responses.lock().unwrap();
         responses.insert(url.to_string(), response);
+    }
+
+    fn _expect_get_from_str(&self, url: &str, content: &str) {
+        self.expect_get(url, MockHttpResponse::new(200, content));
+    }
+
+    fn _expect_get_from_file(&self, url: &str, path: &str) -> std::io::Result<()> {
+        let content = fs::read_to_string(path)?;
+        self._expect_get_from_str(url, &content);
+        Ok(())
+    }
+
+    fn _expect_post_from_str(&self, url: &str, content: &str) {
+        self.expect_post(url, MockHttpResponse::new(200, content));
+    }
+
+    fn _expect_post_from_file(&self, url: &str, path: &str) -> std::io::Result<()> {
+        let content = fs::read_to_string(path)?;
+        self._expect_post_from_str(url, &content);
+        Ok(())
+    }
+
+    pub fn set_favorites_response_from_str(&self, content: &str) {
+        self._expect_get_from_str(URL_FAVORITES, content)
+    }
+
+    pub fn set_favorites_response_from_file(&self, path: &str) -> std::io::Result<()> {
+        self._expect_get_from_file(URL_FAVORITES, path)
+    }
+
+    pub fn set_profile_statuses_response_from_str(&self, content: &str) {
+        self._expect_get_from_str(URL_PROFILE_STATUSES, content)
+    }
+
+    pub fn set_profile_statuses_response_from_file(&self, path: &str) -> std::io::Result<()> {
+        self._expect_get_from_file(URL_PROFILE_STATUSES, path)
+    }
+
+    pub fn set_favorites_destroy_response_from_str(&self, content: &str) {
+        self._expect_post_from_str(URL_FAVORITES_DESTROY, content)
+    }
+
+    pub fn set_favorites_destroy_response_from_file(&self, path: &str) -> std::io::Result<()> {
+        self._expect_post_from_file(URL_FAVORITES_DESTROY, path)
+    }
+
+    pub fn set_get_sms_code_response_from_str(&self, content: &str) {
+        self._expect_post_from_str(URL_SEND_CODE, content)
+    }
+
+    pub fn set_get_sms_code_response_from_file(&self, path: &str) -> std::io::Result<()> {
+        self._expect_post_from_file(URL_SEND_CODE, path)
+    }
+
+    pub fn set_login_response_from_str(&self, content: &str) {
+        self._expect_post_from_str(URL_LOGIN, content)
+    }
+
+    pub fn set_login_response_from_file(&self, path: &str) -> std::io::Result<()> {
+        self._expect_post_from_file(URL_LOGIN, path)
+    }
+
+    pub fn set_long_text_response_from_str(&self, content: &str) {
+        self._expect_get_from_str(URL_STATUSES_SHOW, content)
+    }
+
+    pub fn set_long_text_response_from_file(&self, path: &str) -> std::io::Result<()> {
+        self._expect_get_from_file(URL_STATUSES_SHOW, path)
+    }
+
+    pub fn set_emoji_update_response_from_str(&self, content: &str) {
+        self._expect_post_from_str(URL_EMOJI_UPDATE, content)
+    }
+
+    pub fn set_emoji_update_response_from_file(&self, path: &str) -> std::io::Result<()> {
+        self._expect_post_from_file(URL_EMOJI_UPDATE, path)
     }
 }
 
@@ -79,10 +150,7 @@ impl HttpClient for MockClient {
     ) -> Result<Self::Response> {
         let responses = self.responses.lock().unwrap();
         responses.get(url).cloned().ok_or_else(|| {
-            Error::ApiError(ErrResponse {
-                errmsg: format!("No mock response set for URL: {}", url),
-                ..Default::default()
-            })
+            Error::DataConversionError(format!("No mock response set for URL: {url}"))
         })
     }
 
@@ -94,10 +162,7 @@ impl HttpClient for MockClient {
     ) -> Result<Self::Response> {
         let responses = self.responses.lock().unwrap();
         responses.get(url).cloned().ok_or_else(|| {
-            Error::ApiError(ErrResponse {
-                errmsg: format!("No mock response set for URL: {}", url),
-                ..Default::default()
-            })
+            Error::DataConversionError(format!("No mock response set for URL: {url}"))
         })
     }
 }
@@ -106,6 +171,8 @@ impl HttpClient for MockClient {
 mod tests {
     use super::*;
     use serde::Deserialize;
+    use std::io::Write;
+    use tempfile::NamedTempFile;
 
     #[derive(Debug, Deserialize, Serialize, PartialEq)]
     struct TestData {
@@ -144,4 +211,94 @@ mod tests {
             "Failed to convert data: No mock response set for URL: http://example.com/api/test_fail"
         );
     }
+
+    macro_rules! test_setter {
+        ($test_name:ident, $method_str:ident, $method_file:ident, $url:expr, $is_get:expr) => {
+            #[tokio::test]
+            async fn $test_name() {
+                let client = MockClient::new();
+                let expected_body = format!("{{\"name\": \"{}\"}}", stringify!($test_name));
+
+                // Test from_str
+                client.$method_str(&expected_body);
+                let resp = if $is_get {
+                    client.get($url, &(), 0).await.unwrap()
+                } else {
+                    client.post($url, &(), 0).await.unwrap()
+                };
+                let body = resp.text().await.unwrap();
+                assert_eq!(body, expected_body);
+
+                // Test from_file
+                let mut temp_file = NamedTempFile::new().unwrap();
+                write!(temp_file, "{}", &expected_body).unwrap();
+                client
+                    .$method_file(temp_file.path().to_str().unwrap())
+                    .unwrap();
+                let resp = if $is_get {
+                    client.get($url, &(), 0).await.unwrap()
+                } else {
+                    client.post($url, &(), 0).await.unwrap()
+                };
+                let body = resp.text().await.unwrap();
+                assert_eq!(body, expected_body);
+            }
+        };
+    }
+
+    test_setter!(
+        test_set_favorites,
+        set_favorites_response_from_str,
+        set_favorites_response_from_file,
+        URL_FAVORITES,
+        true
+    );
+
+    test_setter!(
+        test_set_profile_statuses,
+        set_profile_statuses_response_from_str,
+        set_profile_statuses_response_from_file,
+        URL_PROFILE_STATUSES,
+        true
+    );
+
+    test_setter!(
+        test_set_favorites_destroy,
+        set_favorites_destroy_response_from_str,
+        set_favorites_destroy_response_from_file,
+        URL_FAVORITES_DESTROY,
+        false
+    );
+
+    test_setter!(
+        test_set_get_sms_code,
+        set_get_sms_code_response_from_str,
+        set_get_sms_code_response_from_file,
+        URL_SEND_CODE,
+        false
+    );
+
+    test_setter!(
+        test_set_login,
+        set_login_response_from_str,
+        set_login_response_from_file,
+        URL_LOGIN,
+        false
+    );
+
+    test_setter!(
+        test_set_long_text,
+        set_long_text_response_from_str,
+        set_long_text_response_from_file,
+        URL_STATUSES_SHOW,
+        true
+    );
+
+    test_setter!(
+        test_set_emoji_update,
+        set_emoji_update_response_from_str,
+        set_emoji_update_response_from_file,
+        URL_EMOJI_UPDATE,
+        false
+    );
 }
