@@ -33,6 +33,20 @@ pub enum LoginState {
     },
 }
 
+impl LoginState {
+    pub fn is_init(&self) -> bool {
+        matches!(self, Self::Init)
+    }
+
+    pub fn is_waiting_for_code(&self) -> bool {
+        matches!(self, Self::WaitingForCode { .. })
+    }
+
+    pub fn is_logged_in(&self) -> bool {
+        matches!(self, Self::LoggedIn { .. })
+    }
+}
+
 impl<C: HttpClient> WeiboAPIImpl<C> {
     pub fn new(client: C, config: Conifg) -> Self {
         info!("WeiboAPIImpl created");
@@ -71,37 +85,36 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
 
     pub async fn get_sms_code(&mut self, phone_number: String) -> Result<()> {
         info!("getting sms code for phone number: {phone_number}");
-        if let LoginState::Init = self.login_state {
-            let payload = json!( {
-                "c": PARAM_C,
-                "from": FROM,
-                "source": SOURCE,
-                "lang": LANG,
-                "locale": LOCALE,
-                "wm": WM,
-                "ua": UA,
-                "phone": &phone_number,
-            });
-            let response = self
-                .client
-                .post(URL_SEND_CODE, &payload, self.config.retry_times)
-                .await?;
-            self.login_state = LoginState::WaitingForCode { phone_number };
+        if !self.login_state.is_init() {
+            warn!("get_sms_code called not in init state");
+        }
 
-            let send_code_response = response.json::<SendCodeResponse>().await?;
-            match send_code_response {
-                SendCodeResponse::Succ { msg } => {
-                    debug!("sms code sent successfully, get msg {msg}",);
-                    Ok(())
-                }
-                SendCodeResponse::Fail(err) => {
-                    error!("failed to get sms code: {err:?}");
-                    Err(Error::ApiError(err))
-                }
+        let payload = json!( {
+            "c": PARAM_C,
+            "from": FROM,
+            "source": SOURCE,
+            "lang": LANG,
+            "locale": LOCALE,
+            "wm": WM,
+            "ua": UA,
+            "phone": &phone_number,
+        });
+        let response = self
+            .client
+            .post(URL_SEND_CODE, &payload, self.config.retry_times)
+            .await?;
+        self.login_state = LoginState::WaitingForCode { phone_number };
+
+        let send_code_response = response.json::<SendCodeResponse>().await?;
+        match send_code_response {
+            SendCodeResponse::Succ { msg } => {
+                debug!("sms code sent successfully, get msg {msg}",);
+                Ok(())
             }
-        } else {
-            error!("get_sms_code called in invalid state");
-            Err(Error::NotLoggedIn)
+            SendCodeResponse::Fail(err) => {
+                error!("failed to get sms code: {err:?}");
+                Err(Error::ApiError(err))
+            }
         }
     }
 
