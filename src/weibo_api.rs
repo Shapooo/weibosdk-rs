@@ -47,8 +47,8 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
         &self.login_state
     }
 
-    #[allow(unused)]
-    pub(crate) fn from_session(client: C, session: Session) -> Self {
+    #[cfg(any(feature = "test-mocks", test))]
+    pub fn from_session(client: C, session: Session) -> Self {
         info!(
             "WeiboAPIImpl created from session for user {}",
             session.screen_name
