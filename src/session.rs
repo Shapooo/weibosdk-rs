@@ -5,12 +5,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Session {
     pub gsid: String,
     pub uid: String,
     pub screen_name: String,
-    // Add other session-related fields here if necessary
 }
 
 impl Session {
