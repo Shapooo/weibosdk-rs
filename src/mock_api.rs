@@ -99,16 +99,13 @@ impl WeiboAPI for MockAPI {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
 
-    fn get_test_data_path(file_name: &str) -> String {
+    fn get_test_data_path(file_name: &str) -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("tests")
             .join("data")
             .join(file_name)
-            .to_str()
-            .unwrap()
-            .to_owned()
     }
 
     #[tokio::test]

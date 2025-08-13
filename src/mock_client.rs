@@ -3,6 +3,7 @@ use serde::{Serialize, de::DeserializeOwned};
 
 use std::collections::HashMap;
 use std::fs;
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use crate::client::{HttpClient, HttpResponse};
@@ -67,7 +68,7 @@ impl MockClient {
         self.expect_get(url, MockHttpResponse::new(200, content));
     }
 
-    fn _expect_get_from_file(&self, url: &str, path: &str) -> std::io::Result<()> {
+    fn _expect_get_from_file(&self, url: &str, path: &Path) -> std::io::Result<()> {
         let content = fs::read_to_string(path)?;
         self._expect_get_from_str(url, &content);
         Ok(())
@@ -77,7 +78,7 @@ impl MockClient {
         self.expect_post(url, MockHttpResponse::new(200, content));
     }
 
-    fn _expect_post_from_file(&self, url: &str, path: &str) -> std::io::Result<()> {
+    fn _expect_post_from_file(&self, url: &str, path: &Path) -> std::io::Result<()> {
         let content = fs::read_to_string(path)?;
         self._expect_post_from_str(url, &content);
         Ok(())
@@ -87,7 +88,7 @@ impl MockClient {
         self._expect_get_from_str(URL_FAVORITES, content)
     }
 
-    pub fn set_favorites_response_from_file(&self, path: &str) -> std::io::Result<()> {
+    pub fn set_favorites_response_from_file(&self, path: &Path) -> std::io::Result<()> {
         self._expect_get_from_file(URL_FAVORITES, path)
     }
 
@@ -95,7 +96,7 @@ impl MockClient {
         self._expect_get_from_str(URL_PROFILE_STATUSES, content)
     }
 
-    pub fn set_profile_statuses_response_from_file(&self, path: &str) -> std::io::Result<()> {
+    pub fn set_profile_statuses_response_from_file(&self, path: &Path) -> std::io::Result<()> {
         self._expect_get_from_file(URL_PROFILE_STATUSES, path)
     }
 
@@ -103,7 +104,7 @@ impl MockClient {
         self._expect_post_from_str(URL_FAVORITES_DESTROY, content)
     }
 
-    pub fn set_favorites_destroy_response_from_file(&self, path: &str) -> std::io::Result<()> {
+    pub fn set_favorites_destroy_response_from_file(&self, path: &Path) -> std::io::Result<()> {
         self._expect_post_from_file(URL_FAVORITES_DESTROY, path)
     }
 
@@ -111,7 +112,7 @@ impl MockClient {
         self._expect_post_from_str(URL_SEND_CODE, content)
     }
 
-    pub fn set_get_sms_code_response_from_file(&self, path: &str) -> std::io::Result<()> {
+    pub fn set_get_sms_code_response_from_file(&self, path: &Path) -> std::io::Result<()> {
         self._expect_post_from_file(URL_SEND_CODE, path)
     }
 
@@ -119,7 +120,7 @@ impl MockClient {
         self._expect_post_from_str(URL_LOGIN, content)
     }
 
-    pub fn set_login_response_from_file(&self, path: &str) -> std::io::Result<()> {
+    pub fn set_login_response_from_file(&self, path: &Path) -> std::io::Result<()> {
         self._expect_post_from_file(URL_LOGIN, path)
     }
 
@@ -127,7 +128,7 @@ impl MockClient {
         self._expect_get_from_str(URL_STATUSES_SHOW, content)
     }
 
-    pub fn set_long_text_response_from_file(&self, path: &str) -> std::io::Result<()> {
+    pub fn set_long_text_response_from_file(&self, path: &Path) -> std::io::Result<()> {
         self._expect_get_from_file(URL_STATUSES_SHOW, path)
     }
 
@@ -135,7 +136,7 @@ impl MockClient {
         self._expect_post_from_str(URL_EMOJI_UPDATE, content)
     }
 
-    pub fn set_emoji_update_response_from_file(&self, path: &str) -> std::io::Result<()> {
+    pub fn set_emoji_update_response_from_file(&self, path: &Path) -> std::io::Result<()> {
         self._expect_post_from_file(URL_EMOJI_UPDATE, path)
     }
 }
@@ -233,9 +234,7 @@ mod tests {
                 // Test from_file
                 let mut temp_file = NamedTempFile::new().unwrap();
                 write!(temp_file, "{}", &expected_body).unwrap();
-                client
-                    .$method_file(temp_file.path().to_str().unwrap())
-                    .unwrap();
+                client.$method_file(temp_file.path()).unwrap();
                 let resp = if $is_get {
                     client.get($url, &(), 0).await.unwrap()
                 } else {
