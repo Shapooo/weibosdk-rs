@@ -66,21 +66,22 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
         let response = response.json::<ProfileStatusesResponse>().await?;
         match response {
             ProfileStatusesResponse::Succ { cards } => {
-                debug!("got {} cards", cards.len());
                 let posts_iterator = cards.into_iter().filter_map(|card| card.mblog);
 
                 let map_to_post = |post: PostInternal| post.try_into();
 
-                if filter_likes {
+                let posts = if filter_likes {
                     posts_iterator
                         .filter(|post| post.user.as_ref().is_none_or(|u| u.id == uid))
                         .map(map_to_post)
-                        .collect::<Result<Vec<Post>>>()
+                        .collect::<Result<Vec<Post>>>()?
                 } else {
                     posts_iterator
                         .map(map_to_post)
-                        .collect::<Result<Vec<Post>>>()
-                }
+                        .collect::<Result<Vec<Post>>>()?
+                };
+                debug!("got {} posts", posts.len());
+                Ok(posts)
             }
             ProfileStatusesResponse::Fail(err) => {
                 error!("failed to get profile statuses: {err:?}");
