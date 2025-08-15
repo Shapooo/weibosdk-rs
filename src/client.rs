@@ -151,7 +151,7 @@ impl HttpClient for reqwest::Client {
 }
 
 #[cfg(test)]
-mod tests {
+mod local_tests {
     use super::*;
     use serde::{Deserialize, Serialize};
     use wiremock::{

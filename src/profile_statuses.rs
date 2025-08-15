@@ -123,8 +123,8 @@ impl<C: HttpClient> ProfileStatusesAPI for WeiboAPIImpl<C> {
 }
 
 #[cfg(test)]
-mod tests {
-    use std::{io::Read, path::PathBuf};
+mod local_tests {
+    use std::{io::Read, path::Path};
 
     use super::*;
     use crate::{
@@ -142,11 +142,8 @@ mod tests {
         };
         let weibo_api = WeiboAPIImpl::from_session(mock_client.clone(), session);
 
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-        let testcase_path = PathBuf::from(manifest_dir)
-            .join("tests")
-            .join("data")
-            .join("profile_statuses.json");
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let testcase_path = manifest_dir.join("tests/data/profile_statuses.json");
         let mut testcase_file = std::fs::File::open(testcase_path).unwrap();
         let mut mock_response_body = String::new();
         testcase_file

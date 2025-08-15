@@ -167,8 +167,49 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
 
 impl<C: HttpClient> crate::WeiboAPI for WeiboAPIImpl<C> {}
 
+#[derive(Debug, Deserialize, Clone)]
+#[serde(untagged)]
+enum SendCodeResponse {
+    Succ { msg: String },
+    Fail(ErrResponse),
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum LoginResponse {
+    Succ {
+        gsid: String,
+        uid: String,
+        screen_name: String,
+    },
+    Fail(ErrResponse),
+}
+
+async fn execute_login<C: HttpClient, P: Serialize + Send + Sync>(
+    client: &C,
+    payload: &P,
+    retry_times: u8,
+) -> Result<Session> {
+    let response = client.post(URL_LOGIN, payload, retry_times).await?;
+
+    let response = response.json::<LoginResponse>().await?;
+
+    match response {
+        LoginResponse::Succ {
+            gsid,
+            uid,
+            screen_name,
+        } => Ok(Session {
+            gsid,
+            uid,
+            screen_name,
+        }),
+        LoginResponse::Fail(err_res) => Err(Error::ApiError(err_res)),
+    }
+}
+
 #[cfg(test)]
-mod tests {
+mod local_tests {
     use super::*;
     use crate::constants::urls::{URL_LOGIN, URL_SEND_CODE};
     use crate::mock::{MockClient, MockHttpResponse};
@@ -219,9 +260,8 @@ mod tests {
             },
         };
 
-        let result = weibo_api.login(&sms_code).await;
+        weibo_api.login(&sms_code).await.unwrap();
 
-        assert!(result.is_ok());
         assert!(matches!(weibo_api.login_state, LoginState::LoggedIn { .. }));
         if let Ok(session) = weibo_api.session() {
             assert_eq!(session.gsid, "mock_gsid");
@@ -252,55 +292,13 @@ mod tests {
         );
 
         let mut weibo_api = WeiboAPIImpl::new(mock_client.clone(), Default::default());
-        let result = weibo_api.login_with_session(old_session).await;
+        weibo_api.login_with_session(old_session).await.unwrap();
 
-        assert!(result.is_ok());
         assert!(matches!(weibo_api.login_state, LoginState::LoggedIn { .. }));
         if let Ok(session) = weibo_api.session() {
             assert_eq!(session.gsid, "new_gsid");
         } else {
             panic!("Login state should be LoggedIn");
         }
-    }
-}
-
-#[derive(Debug, Deserialize, Clone)]
-#[serde(untagged)]
-enum SendCodeResponse {
-    Succ { msg: String },
-    Fail(ErrResponse),
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(untagged)]
-enum LoginResponse {
-    Succ {
-        gsid: String,
-        uid: String,
-        screen_name: String,
-    },
-    Fail(ErrResponse),
-}
-
-async fn execute_login<C: HttpClient, P: Serialize + Send + Sync>(
-    client: &C,
-    payload: &P,
-    retry_times: u8,
-) -> Result<Session> {
-    let response = client.post(URL_LOGIN, payload, retry_times).await?;
-
-    let response = response.json::<LoginResponse>().await?;
-
-    match response {
-        LoginResponse::Succ {
-            gsid,
-            uid,
-            screen_name,
-        } => Ok(Session {
-            gsid,
-            uid,
-            screen_name,
-        }),
-        LoginResponse::Fail(err_res) => Err(Error::ApiError(err_res)),
     }
 }

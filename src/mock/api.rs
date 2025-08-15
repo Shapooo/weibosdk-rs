@@ -97,14 +97,13 @@ impl ProfileStatusesAPI for MockAPI {
 impl WeiboAPI for MockAPI {}
 
 #[cfg(test)]
-mod tests {
+mod local_tests {
     use super::*;
     use std::path::{Path, PathBuf};
 
     fn get_test_data_path(file_name: &str) -> PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("tests")
-            .join("data")
+            .join("tests/data/")
             .join(file_name)
     }
 
@@ -117,15 +116,13 @@ mod tests {
         mock_client
             .set_get_sms_code_response_from_file(&get_test_data_path("get_sms_code.json"))
             .unwrap();
-        let result = api.get_sms_code("12345678901".to_owned()).await;
-        assert!(result.is_ok());
+        api.get_sms_code("12345678901".to_owned()).await.unwrap();
 
         // login
         mock_client
             .set_login_response_from_file(&get_test_data_path("login.json"))
             .unwrap();
-        let result = api.login("123456").await;
-        assert!(result.is_ok());
+        api.login("123456").await.unwrap();
         assert!(matches!(api.login_state(), &LoginState::LoggedIn { .. }));
     }
 
@@ -142,8 +139,7 @@ mod tests {
         mock_client
             .set_login_response_from_file(&get_test_data_path("login.json"))
             .unwrap();
-        let result = api.login_with_session(session).await;
-        assert!(result.is_ok());
+        api.login_with_session(session).await.unwrap();
         assert!(matches!(api.login_state(), &LoginState::LoggedIn { .. }));
     }
 
@@ -164,9 +160,8 @@ mod tests {
         mock_client
             .set_emoji_update_response_from_file(&get_test_data_path("emoji.json"))
             .unwrap();
-        let result = api.emoji_update().await;
-        assert!(result.is_ok());
-        assert!(!result.unwrap().is_empty());
+        let result = api.emoji_update().await.unwrap();
+        assert!(!result.is_empty());
     }
 
     #[tokio::test]
@@ -175,17 +170,15 @@ mod tests {
         mock_client
             .set_favorites_response_from_file(&get_test_data_path("favorites.json"))
             .unwrap();
-        let result = api.favorites(1).await;
-        assert!(result.is_ok());
-        assert!(!result.unwrap().is_empty());
+        let result = api.favorites(1).await.unwrap();
+        assert!(!result.is_empty());
     }
 
     #[tokio::test]
     async fn test_favorites_destroy() {
         let (mock_client, api) = create_logged_in_api();
         mock_client.set_favorites_destroy_response_from_str("");
-        let result = api.favorites_destroy(123).await;
-        assert!(result.is_ok());
+        api.favorites_destroy(123).await.unwrap();
     }
 
     #[tokio::test]
@@ -194,9 +187,8 @@ mod tests {
         mock_client
             .set_long_text_response_from_file(&get_test_data_path("long_text.json"))
             .unwrap();
-        let result = api.get_long_text(123).await;
-        assert!(result.is_ok());
-        assert!(!result.unwrap().is_empty());
+        let result = api.get_long_text(123).await.unwrap();
+        assert!(!result.is_empty());
     }
 
     #[tokio::test]
@@ -205,7 +197,7 @@ mod tests {
         mock_client
             .set_profile_statuses_response_from_file(&get_test_data_path("profile_statuses.json"))
             .unwrap();
-        let result = api.profile_statuses(123, 1).await;
-        assert!(result.is_ok());
+        let result = api.profile_statuses(1786055427, 1).await.unwrap();
+        assert!(!result.is_empty());
     }
 }

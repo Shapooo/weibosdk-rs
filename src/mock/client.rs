@@ -170,7 +170,7 @@ impl HttpClient for MockClient {
 }
 
 #[cfg(test)]
-mod tests {
+mod local_tests {
     use super::*;
     use serde::Deserialize;
     use std::io::Write;

@@ -84,8 +84,8 @@ impl<C: HttpClient> FavoritesAPI for WeiboAPIImpl<C> {
 }
 
 #[cfg(test)]
-mod tests {
-    use std::{io::Read, path::PathBuf};
+mod local_tests {
+    use std::{io::Read, path::Path};
 
     use super::*;
     use crate::{
@@ -103,11 +103,8 @@ mod tests {
         };
         let weibo_api = WeiboAPIImpl::from_session(mock_client.clone(), session);
 
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-        let testcase_path = PathBuf::from(manifest_dir)
-            .join("tests")
-            .join("data")
-            .join("favorites.json");
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let testcase_path = manifest_dir.join("tests/data/favorites.json");
         let mut testcase_file = std::fs::File::open(testcase_path).unwrap();
         let mut mock_response_body = String::new();
         testcase_file
@@ -144,8 +141,7 @@ mod tests {
         let mock_response = MockHttpResponse::new(200, "{}");
         mock_client.expect_post(URL_FAVORITES_DESTROY, mock_response);
 
-        let result = weibo_api.favorites_destroy(id).await;
-        assert!(result.is_ok());
+        weibo_api.favorites_destroy(id).await.unwrap();
     }
 }
 

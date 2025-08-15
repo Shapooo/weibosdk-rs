@@ -76,13 +76,13 @@ impl<C: HttpClient> EmojiUpdateAPI for WeiboAPIImpl<C> {
 }
 
 #[cfg(test)]
-mod tests {
+mod local_tests {
     use super::*;
     use crate::{
         mock::{MockClient, MockHttpResponse},
         session::Session,
     };
-    use std::{io::Read, path::PathBuf};
+    use std::{io::Read, path::Path};
 
     #[tokio::test]
     async fn test_emoji_update() {
@@ -94,11 +94,8 @@ mod tests {
         };
         let weibo_api = WeiboAPIImpl::from_session(mock_client.clone(), session);
 
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-        let testcase_path = PathBuf::from(manifest_dir)
-            .join("tests")
-            .join("data")
-            .join("emoji.json");
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let testcase_path = manifest_dir.join("tests/data/emoji.json");
         let mut testcase_file = std::fs::File::open(testcase_path).unwrap();
         let mut mock_response_body = String::new();
         testcase_file
@@ -129,9 +126,7 @@ mod real_tests {
         if let Ok(session) = Session::load(session_file) {
             let client = client::new_client_with_headers().unwrap();
             let weibo_api = WeiboAPIImpl::from_session(client, session);
-            let res = weibo_api.emoji_update().await;
-            assert!(res.is_ok());
-            let emoji_map = res.unwrap();
+            let emoji_map = weibo_api.emoji_update().await.unwrap();
             assert!(!emoji_map.is_empty());
         }
     }

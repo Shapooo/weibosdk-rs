@@ -64,7 +64,7 @@ where
 }
 
 #[cfg(test)]
-mod utils {
+mod local_tests {
     use super::*;
 
     #[test]

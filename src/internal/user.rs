@@ -71,18 +71,15 @@ impl TryInto<Value> for UserInternal {
 }
 
 #[cfg(test)]
-mod tests {
-    use std::{io::Read, path::PathBuf};
+mod local_tests {
+    use std::{io::Read, path::Path};
 
     use super::*;
 
     #[test]
     fn test_deserialize_user_internal() {
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-        let testcase_path = PathBuf::from(manifest_dir)
-            .join("tests")
-            .join("data")
-            .join("favorites.json");
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let testcase_path = manifest_dir.join("tests/data/favorites.json");
         let mut testcase_file = std::fs::File::open(testcase_path).unwrap();
         let mut response_body = String::new();
         testcase_file.read_to_string(&mut response_body).unwrap();

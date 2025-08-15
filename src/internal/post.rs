@@ -213,7 +213,7 @@ pub fn parse_created_at(created_at: &str) -> Result<DateTime<FixedOffset>> {
 }
 
 #[cfg(test)]
-mod tests {
+mod local_tests {
     use super::*;
     use std::{io::Read, path::Path};
 
