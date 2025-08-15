@@ -24,7 +24,12 @@ struct FavoritesPost {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
 enum FavoritesResponse {
-    Succ { favorites: Vec<FavoritesPost> },
+    Succ {
+        favorites: Vec<FavoritesPost>,
+        #[serde(default)]
+        #[allow(unused)]
+        total_number: i32,
+    },
     Fail(ErrResponse),
 }
 
@@ -51,7 +56,10 @@ impl<C: HttpClient> FavoritesAPI for WeiboAPIImpl<C> {
             .await?;
         let res = response.json::<FavoritesResponse>().await?;
         match res {
-            FavoritesResponse::Succ { favorites } => {
+            FavoritesResponse::Succ {
+                favorites,
+                total_number: _,
+            } => {
                 debug!("got {} favorites", favorites.len());
                 let posts = favorites
                     .into_iter()
@@ -112,7 +120,10 @@ mod local_tests {
             .unwrap();
         let res = serde_json::from_str::<FavoritesResponse>(&mock_response_body).unwrap();
         let expect_posts = match res {
-            FavoritesResponse::Succ { favorites } => favorites
+            FavoritesResponse::Succ {
+                favorites,
+                total_number: _,
+            } => favorites
                 .into_iter()
                 .map(|post| post.status.try_into())
                 .collect::<Result<Vec<Post>>>()
