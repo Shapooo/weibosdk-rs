@@ -74,7 +74,7 @@ use crate::{Post, User};
  *
  * 部分 post 从网页接口拿不到，只能手机客户端和网页端能看到，这里先从网页端拿。网页端的字段略有不同，包含"ab_switcher", "ad_state"等字段，这里予以忽略，后面有必要删除不必要的字段，并增加 Repository 层以及 DTO 类型
  */
-#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct PostInternal {
     pub id: i64,
     pub mblogid: String,
@@ -82,6 +82,7 @@ pub struct PostInternal {
     pub region_name: Option<String>,
     #[serde(default, deserialize_with = "deserialize_deleted")]
     pub deleted: bool,
+    #[serde(default, deserialize_with = "deserialize_ids")]
     pub pic_ids: Option<Vec<String>>,
     pub pic_num: Option<i64>,
     pub url_struct: Option<Value>,
@@ -148,6 +149,16 @@ where
     Ok(str == "1")
 }
 
+pub fn deserialize_ids<'de, D>(
+    deserializer: D,
+) -> std::result::Result<Option<Vec<String>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let ids = Option::<Vec<String>>::deserialize(deserializer)?;
+    Ok(ids.and_then(|ids| if ids.is_empty() { None } else { Some(ids) }))
+}
+
 impl TryFrom<Box<PostInternal>> for Box<Post> {
     type Error = Error;
     fn try_from(value: Box<PostInternal>) -> Result<Self> {
@@ -204,15 +215,12 @@ pub fn parse_created_at(created_at: &str) -> Result<DateTime<FixedOffset>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{io::Read, path::PathBuf};
+    use std::{io::Read, path::Path};
 
     #[test]
     fn test_deserialize_post_internal() {
-        let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-        let testcase_path = PathBuf::from(manifest_dir)
-            .join("tests")
-            .join("data")
-            .join("favorites.json");
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let testcase_path = manifest_dir.join("tests/data/favorites.json");
         let mut testcase_file = std::fs::File::open(testcase_path).unwrap();
         let mut response_body = String::new();
         testcase_file.read_to_string(&mut response_body).unwrap();
