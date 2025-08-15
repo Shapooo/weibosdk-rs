@@ -79,7 +79,7 @@ impl<C: HttpClient> EmojiUpdateAPI for WeiboAPIImpl<C> {
 mod tests {
     use super::*;
     use crate::{
-        mock_client::{MockClient, MockHttpResponse},
+        mock::{MockClient, MockHttpResponse},
         session::Session,
     };
     use std::{io::Read, path::PathBuf};

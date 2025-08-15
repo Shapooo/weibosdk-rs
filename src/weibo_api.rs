@@ -171,7 +171,7 @@ impl<C: HttpClient> crate::WeiboAPI for WeiboAPIImpl<C> {}
 mod tests {
     use super::*;
     use crate::constants::urls::{URL_LOGIN, URL_SEND_CODE};
-    use crate::mock_client::{MockClient, MockHttpResponse};
+    use crate::mock::{MockClient, MockHttpResponse};
     use serde_json::json;
 
     #[tokio::test]

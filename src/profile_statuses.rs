@@ -128,7 +128,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        mock_client::{MockClient, MockHttpResponse},
+        mock::{MockClient, MockHttpResponse},
         session::Session,
     };
 

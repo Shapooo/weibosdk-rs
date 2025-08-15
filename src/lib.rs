@@ -16,9 +16,7 @@ mod internal;
 mod utils;
 
 #[cfg(any(feature = "test-mocks", test))]
-pub mod mock_api;
-#[cfg(any(feature = "test-mocks", test))]
-pub mod mock_client;
+pub mod mock;
 
 pub use error::{Error, Result};
 pub use post::Post;

@@ -13,7 +13,7 @@ use crate::{
     weibo_api::{LoginState, WeiboAPIImpl},
 };
 
-use crate::mock_client::MockClient;
+use super::client::MockClient;
 
 #[derive(Clone)]
 pub struct MockAPI {
