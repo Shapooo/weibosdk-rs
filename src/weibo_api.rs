@@ -1,4 +1,7 @@
+use std::collections::HashMap;
+
 use log::{debug, error, info, warn};
+use reqwest_cookie_store::CookieStore;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -167,7 +170,7 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
 
 impl<C: HttpClient> crate::WeiboAPI for WeiboAPIImpl<C> {}
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
 enum SendCodeResponse {
     Succ { msg: String },
@@ -181,8 +184,18 @@ enum LoginResponse {
         gsid: String,
         uid: String,
         screen_name: String,
+        #[serde(deserialize_with = "deserialize_cookie_store")]
+        cookie: CookieStore,
     },
     Fail(ErrResponse),
+}
+
+fn deserialize_cookie_store<'de, D>(deserializer: D) -> std::result::Result<CookieStore, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let map = HashMap::<String, String>::deserialize(deserializer)?;
+    todo!()
 }
 
 async fn execute_login<C: HttpClient, P: Serialize + Send + Sync>(
@@ -199,6 +212,7 @@ async fn execute_login<C: HttpClient, P: Serialize + Send + Sync>(
             gsid,
             uid,
             screen_name,
+            cookie,
         } => Ok(Session {
             gsid,
             uid,
@@ -262,11 +276,15 @@ mod local_tests {
 
         weibo_api.login(&sms_code).await.unwrap();
 
+        let mock_gsid = login_response_json["gsid"].as_str().unwrap();
+        let mock_uid = login_response_json["uid"].as_str().unwrap();
+        let mock_screen_name = login_response_json["screen_name"].as_str().unwrap();
+
         assert!(matches!(weibo_api.login_state, LoginState::LoggedIn { .. }));
         if let Ok(session) = weibo_api.session() {
-            assert_eq!(session.gsid, "mock_gsid");
-            assert_eq!(session.uid, "mock_uid");
-            assert_eq!(session.screen_name, "mock_screen_name");
+            assert_eq!(session.gsid, mock_gsid);
+            assert_eq!(session.uid, mock_uid);
+            assert_eq!(session.screen_name, mock_screen_name);
         } else {
             panic!("Login state should be LoggedIn");
         }
@@ -295,8 +313,9 @@ mod local_tests {
         weibo_api.login_with_session(old_session).await.unwrap();
 
         assert!(matches!(weibo_api.login_state, LoginState::LoggedIn { .. }));
+        let new_gsid = login_response_json["gsid"].as_str().unwrap();
         if let Ok(session) = weibo_api.session() {
-            assert_eq!(session.gsid, "new_gsid");
+            assert_eq!(session.gsid, new_gsid);
         } else {
             panic!("Login state should be LoggedIn");
         }
