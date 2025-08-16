@@ -108,6 +108,7 @@ mod local_tests {
             gsid: "test_gsid".to_string(),
             uid: "test_uid".to_string(),
             screen_name: "test_screen_name".to_string(),
+            cookie_store: Default::default(),
         };
         let weibo_api = WeiboAPIImpl::from_session(mock_client.clone(), session);
 
@@ -145,6 +146,7 @@ mod local_tests {
             gsid: "test_gsid".to_string(),
             uid: "test_uid".to_string(),
             screen_name: "test_screen_name".to_string(),
+            cookie_store: Default::default(),
         };
         let weibo_api = WeiboAPIImpl::from_session(mock_client.clone(), session);
         let id = 12345;

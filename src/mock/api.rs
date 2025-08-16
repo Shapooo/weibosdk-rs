@@ -134,6 +134,7 @@ mod local_tests {
             gsid: "gsid".to_string(),
             uid: "uid".to_string(),
             screen_name: "screen_name".to_string(),
+            cookie_store: Default::default(),
         };
 
         mock_client
@@ -149,6 +150,7 @@ mod local_tests {
             gsid: "gsid".to_string(),
             uid: "uid".to_string(),
             screen_name: "screen_name".to_string(),
+            cookie_store: Default::default(),
         };
         let api = MockAPI::from_session(mock_client.clone(), session);
         (mock_client, api)

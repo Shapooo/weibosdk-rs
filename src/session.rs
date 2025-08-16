@@ -1,6 +1,7 @@
 use std::{fs, path::Path};
 
 use log::{debug, info};
+use reqwest_cookie_store::CookieStore;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
@@ -10,6 +11,7 @@ pub struct Session {
     pub gsid: String,
     pub uid: String,
     pub screen_name: String,
+    pub cookie_store: CookieStore,
 }
 
 impl Session {

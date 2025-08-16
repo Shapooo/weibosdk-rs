@@ -217,6 +217,7 @@ async fn execute_login<C: HttpClient, P: Serialize + Send + Sync>(
             gsid,
             uid,
             screen_name,
+            cookie_store: cookie,
         }),
         LoginResponse::Fail(err_res) => Err(Error::ApiError(err_res)),
     }
@@ -228,6 +229,16 @@ mod local_tests {
     use crate::constants::urls::{URL_LOGIN, URL_SEND_CODE};
     use crate::mock::{MockClient, MockHttpResponse};
     use serde_json::json;
+    use std::io::Read;
+
+    fn create_login_json_str() -> String {
+        let response_path =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/login.json");
+        let mut file = std::fs::File::open(response_path).unwrap();
+        let mut res = String::new();
+        file.read_to_string(&mut res).unwrap();
+        res
+    }
 
     #[tokio::test]
     async fn test_get_send_code() {
@@ -256,11 +267,8 @@ mod local_tests {
         let phone_number = "1234567890".to_string();
         let sms_code = "123456".to_string();
 
-        let login_response_json = json!({
-            "gsid": "mock_gsid",
-            "uid": "mock_uid",
-            "screen_name": "mock_screen_name"
-        });
+        let login_response_json =
+            serde_json::from_str::<serde_json::Value>(&create_login_json_str()).unwrap();
         mock_client.expect_post(
             URL_LOGIN,
             MockHttpResponse::new(200, &login_response_json.to_string()),
@@ -297,13 +305,11 @@ mod local_tests {
             gsid: "old_gsid".to_string(),
             uid: "test_uid".to_string(),
             screen_name: "test_screen_name".to_string(),
+            cookie_store: Default::default(),
         };
 
-        let login_response_json = json!({
-            "gsid": "new_gsid",
-            "uid": "test_uid",
-            "screen_name": "test_screen_name"
-        });
+        let login_response_json =
+            serde_json::from_str::<serde_json::Value>(&create_login_json_str()).unwrap();
         mock_client.expect_post(
             URL_LOGIN,
             MockHttpResponse::new(200, &login_response_json.to_string()),
