@@ -7,7 +7,7 @@ use cookie::SameSite;
 use log::error;
 use reqwest_cookie_store::{CookieStore, RawCookie};
 use serde::Deserialize;
-use time::{Duration, OffsetDateTime, macros::format_description};
+use time::{Duration, PrimitiveDateTime, macros::format_description};
 
 use crate::error::{Error, Result};
 
@@ -111,12 +111,19 @@ fn parse_cookie<'a>(cookie: &'a str) -> Result<RawCookie<'a>> {
             }
             ("partitioned", _) => cookie = cookie.partitioned(true),
             ("expires", Some(v)) => {
-                let format = format_description!(
+                let fmt1 = format_description!(
+                    "[weekday repr:short], [day]-[month repr:short]-[year] [hour]:[minute]:[second] GMT"
+                );
+                let fmt2 = format_description!(
                     "[weekday], [day]-[month repr:short]-[year] [hour]:[minute]:[second] GMT"
                 );
-                let time = OffsetDateTime::parse(v, &format);
+                let time = PrimitiveDateTime::parse(v, &fmt1)
+                    .or_else(|_| PrimitiveDateTime::parse(v, &fmt2))
+                    .map(|t| t.assume_utc());
                 if let Ok(time) = time {
                     cookie = cookie.expires(time);
+                } else {
+                    error!("time {v} parse failed {time:?}");
                 }
             }
             _ => {
