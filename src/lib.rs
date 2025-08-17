@@ -12,6 +12,7 @@ pub mod user;
 pub mod weibo_api;
 
 mod constants;
+mod cookie;
 mod internal;
 mod utils;
 
