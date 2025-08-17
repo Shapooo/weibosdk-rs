@@ -139,6 +139,14 @@ impl MockClient {
     pub fn set_emoji_update_response_from_file(&self, path: &Path) -> std::io::Result<()> {
         self._expect_post_from_file(URL_EMOJI_UPDATE, path)
     }
+
+    pub fn set_web_emoticon_response_from_str(&self, content: &str) {
+        self._expect_get_from_str(URL_WEB_EMOTICON, content);
+    }
+
+    pub fn set_web_emoticon_response_from_file(&self, path: &Path) -> std::io::Result<()> {
+        self._expect_get_from_file(URL_WEB_EMOTICON, path)
+    }
 }
 
 impl HttpClient for MockClient {

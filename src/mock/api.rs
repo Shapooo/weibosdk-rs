@@ -162,6 +162,9 @@ mod local_tests {
         mock_client
             .set_emoji_update_response_from_file(&get_test_data_path("emoji.json"))
             .unwrap();
+        mock_client
+            .set_web_emoticon_response_from_file(&get_test_data_path("web_emoji.json"))
+            .unwrap();
         let result = api.emoji_update().await.unwrap();
         assert!(!result.is_empty());
     }
