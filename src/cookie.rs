@@ -21,7 +21,6 @@ impl TryFrom<Cookie> for CookieStore {
     fn try_from(value: Cookie) -> std::result::Result<Self, Self::Error> {
         let mut cookie_store = CookieStore::new(None);
         for (domain, cookie) in value.cookie.iter() {
-            let cookie = parse_cookie(cookie)?;
             let url =
                 std::borrow::Cow::Borrowed("https://") + domain.strip_prefix('.').unwrap_or(domain);
             let request_url = url::Url::parse(&url)
@@ -29,10 +28,15 @@ impl TryFrom<Cookie> for CookieStore {
                     error!("{url} parse failed: {e}");
                 })
                 .unwrap();
-            cookie_store
-                .insert_raw(&cookie, &request_url)
-                .map_err(|e| error!("cookie of {url} insert failed: {e}"))
-                .unwrap();
+            for cookie in cookie.lines().map(|c| parse_cookie(c)) {
+                cookie_store
+                    .insert_raw(&cookie?, &request_url)
+                    .map_err(|e| {
+                        error!("cookie of {url} insert failed: {e}");
+                        e
+                    })
+                    .unwrap();
+            }
         }
 
         Ok(cookie_store)
