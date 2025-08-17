@@ -2,8 +2,11 @@
 use std::sync::Arc;
 
 use bytes::Bytes;
-use log::{debug, error, info, trace};
-use reqwest::header::{self, HeaderMap, HeaderValue};
+use log::{debug, info, trace};
+use reqwest::{
+    RequestBuilder,
+    header::{self, HeaderMap, HeaderValue},
+};
 use reqwest_cookie_store::{CookieStore, CookieStoreMutex};
 use serde::{Serialize, de::DeserializeOwned};
 
@@ -58,6 +61,35 @@ impl Client {
             main_client: make_main_client()?,
             web_client: None,
         })
+    }
+
+    async fn send_request(
+        &self,
+        request_builder: RequestBuilder,
+        retry_times: u8,
+    ) -> Result<reqwest::Response> {
+        let mut attempts = 0;
+        loop {
+            let result = request_builder.try_clone().unwrap().send().await;
+            match result {
+                Ok(response) => {
+                    if response.status().is_success() {
+                        return Ok(response);
+                    } else {
+                        return Err(Error::NetworkError(
+                            response.error_for_status().err().unwrap(),
+                        ));
+                    }
+                }
+                Err(e) => {
+                    if e.is_timeout() && attempts < retry_times {
+                        attempts += 1;
+                        continue;
+                    }
+                    return Err(e.into());
+                }
+            }
+        }
     }
 }
 
@@ -118,41 +150,20 @@ impl HttpClient for Client {
         query: &(impl Serialize + Send + Sync),
         retry_times: u8,
     ) -> Result<Self::Response> {
-        let mut attempts = 0;
         debug!("Sending GET request to {url}");
         trace!(
             "GET request query: {}",
             serde_json::to_string_pretty(query).unwrap_or_default()
         );
-        loop {
-            let result = self.main_client.get(url).query(query).send().await;
-            match result {
-                Ok(response) => {
-                    if response.status().is_success() {
-                        debug!("GET request to {url} success");
-                        return Ok(response);
-                    } else {
-                        error!(
-                            "GET request to {} failed with status {}",
-                            url,
-                            response.status()
-                        );
-                        return Err(Error::NetworkError(
-                            response.error_for_status().err().unwrap(),
-                        ));
-                    }
-                }
-                Err(e) => {
-                    error!("GET request to {url} failed with error: {e}");
-                    if e.is_timeout() && attempts < retry_times {
-                        attempts += 1;
-                        debug!("Retrying GET request to {url}, attempt {attempts}");
-                        continue;
-                    }
-                    return Err(e.into());
-                }
-            }
-        }
+        let url = url::Url::parse(url).map_err(|e| Error::DataConversionError(format!("{e}")))?;
+        let client = if url.domain() == Some("weibo.com") {
+            self.web_client.as_ref().ok_or(Error::NotLoggedIn)?
+        } else {
+            &self.main_client
+        };
+
+        let request_builder = client.get(url).query(query);
+        self.send_request(request_builder, retry_times).await
     }
 
     async fn post(
@@ -161,41 +172,19 @@ impl HttpClient for Client {
         form: &(impl Serialize + Send + Sync),
         retry_times: u8,
     ) -> Result<Self::Response> {
-        let mut attempts = 0;
         debug!("Sending POST request to {url}");
         trace!(
             "POST request form: {}",
             serde_json::to_string_pretty(form).unwrap_or_default()
         );
-        loop {
-            let result = self.main_client.post(url).form(form).send().await;
-            match result {
-                Ok(response) => {
-                    if response.status().is_success() {
-                        debug!("POST request to {url} success");
-                        return Ok(response);
-                    } else {
-                        error!(
-                            "POST request to {} failed with status {}",
-                            url,
-                            response.status()
-                        );
-                        return Err(Error::NetworkError(
-                            response.error_for_status().err().unwrap(),
-                        ));
-                    }
-                }
-                Err(e) => {
-                    error!("POST request to {url} failed with error: {e}");
-                    if e.is_timeout() && attempts < retry_times {
-                        attempts += 1;
-                        debug!("Retrying POST request to {url}, attempt {attempts}");
-                        continue;
-                    }
-                    return Err(e.into());
-                }
-            }
-        }
+        let url = url::Url::parse(url).map_err(|e| Error::DataConversionError(format!("{e}")))?;
+        let client = if url.domain() == Some("weibo.com") {
+            self.web_client.as_ref().ok_or(Error::NotLoggedIn)?
+        } else {
+            &self.main_client
+        };
+        let request_builder = client.post(url).form(form);
+        self.send_request(request_builder, retry_times).await
     }
 
     fn set_cookie(&mut self, cookie_store: CookieStore) -> Result<()> {
