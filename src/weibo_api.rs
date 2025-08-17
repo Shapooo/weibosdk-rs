@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use log::{debug, error, info, warn};
 use reqwest_cookie_store::CookieStore;
 use serde::{Deserialize, Serialize};
@@ -177,50 +175,53 @@ enum SendCodeResponse {
     Fail(ErrResponse),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
 enum LoginResponse {
-    Succ {
-        gsid: String,
-        uid: String,
-        screen_name: String,
-        #[serde(deserialize_with = "deserialize_cookie_store")]
-        cookie: CookieStore,
-    },
+    Succ(LoginSucc),
     Fail(ErrResponse),
 }
 
-fn deserialize_cookie_store<'de, D>(deserializer: D) -> std::result::Result<CookieStore, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let map = HashMap::<String, String>::deserialize(deserializer)?;
-    todo!()
+#[derive(Debug, Clone, Deserialize)]
+struct LoginSucc {
+    pub gsid: String,
+    pub uid: String,
+    pub screen_name: String,
+    pub cookie: crate::cookie::Cookie,
 }
 
-async fn execute_login<C: HttpClient, P: Serialize + Send + Sync>(
-    client: &C,
-    payload: &P,
+impl TryFrom<LoginSucc> for Session {
+    type Error = Error;
+    fn try_from(value: LoginSucc) -> std::result::Result<Self, Self::Error> {
+        Ok(Self {
+            gsid: value.gsid,
+            uid: value.uid,
+            screen_name: value.screen_name,
+            cookie_store: TryInto::<CookieStore>::try_into(value.cookie)?,
+        })
+    }
+}
+
+impl TryFrom<LoginResponse> for Session {
+    type Error = Error;
+    fn try_from(value: LoginResponse) -> std::result::Result<Self, Self::Error> {
+        match value {
+            LoginResponse::Succ(succ) => succ.try_into(),
+            LoginResponse::Fail(err_res) => Err(Error::ApiError(err_res)),
+        }
+    }
+}
+
+async fn execute_login<'a, 'b, C: HttpClient, P: Serialize + Send + Sync>(
+    client: &'b C,
+    payload: &'b P,
     retry_times: u8,
 ) -> Result<Session> {
     let response = client.post(URL_LOGIN, payload, retry_times).await?;
 
     let response = response.json::<LoginResponse>().await?;
 
-    match response {
-        LoginResponse::Succ {
-            gsid,
-            uid,
-            screen_name,
-            cookie,
-        } => Ok(Session {
-            gsid,
-            uid,
-            screen_name,
-            cookie_store: cookie,
-        }),
-        LoginResponse::Fail(err_res) => Err(Error::ApiError(err_res)),
-    }
+    Ok(response.try_into()?)
 }
 
 #[cfg(test)]
