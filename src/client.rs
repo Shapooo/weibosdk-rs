@@ -63,6 +63,14 @@ impl Client {
         })
     }
 
+    pub fn main_client(&self) -> &reqwest::Client {
+        &self.main_client
+    }
+
+    pub fn web_client(&self) -> Option<&reqwest::Client> {
+        self.web_client.as_ref()
+    }
+
     async fn send_request(
         &self,
         request_builder: RequestBuilder,
