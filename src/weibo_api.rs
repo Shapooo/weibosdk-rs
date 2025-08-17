@@ -63,11 +63,12 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
     }
 
     #[cfg(any(feature = "test-mocks", test))]
-    pub fn from_session(client: C, session: Session) -> Self {
+    pub fn from_session(mut client: C, session: Session) -> Self {
         info!(
             "WeiboAPIImpl created from session for user {}",
             session.screen_name
         );
+        client.set_cookie(session.cookie_store.clone()).unwrap();
         WeiboAPIImpl {
             client,
             config: Default::default(),
