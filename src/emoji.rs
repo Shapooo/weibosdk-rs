@@ -1,12 +1,13 @@
 #![allow(async_fn_in_trait)]
 use log::{debug, error, info};
 use serde::Deserialize;
+use serde_json::Value;
 use std::collections::HashMap;
 
 use crate::client::{HttpClient, HttpResponse};
 use crate::constants::{
     params::{LANG, UA},
-    urls::URL_EMOJI_UPDATE,
+    urls::{URL_EMOJI_UPDATE, URL_WEB_EMOTICON},
 };
 use crate::err_response::ErrResponse;
 use crate::error::{Error, Result};
@@ -43,6 +44,66 @@ pub trait EmojiUpdateAPI {
 impl<C: HttpClient> EmojiUpdateAPI for WeiboAPIImpl<C> {
     async fn emoji_update(&self) -> Result<HashMap<String, String>> {
         info!("getting emoji update");
+        let mut res = self.fetch_from_mobile_api().await?;
+        res.extend(self.fetch_from_web_api().await?);
+        debug!("emoji update success, got {} emojis", res.len());
+        Ok(res)
+    }
+}
+
+impl<C: HttpClient> WeiboAPIImpl<C> {
+    async fn fetch_from_web_api(&self) -> Result<HashMap<String, String>> {
+        let url = URL_WEB_EMOTICON;
+        debug!("fetch emoticon, url: {url}");
+        let res = self
+            .client
+            .get(url, &serde_json::json!({}), self.config.retry_times)
+            .await?;
+        let mut json: Value = res.json().await?;
+        if json["ok"] != 1 {
+            let err_res = ErrResponse {
+                errmsg: json["url"].as_str().unwrap_or_default().to_string(),
+                errno: json["ok"].as_i64().unwrap_or(-100) as i32,
+                errtype: Default::default(),
+                isblock: Default::default(),
+            };
+            return Err(Error::ApiError(err_res));
+        }
+
+        let mut res = HashMap::new();
+        let Value::Object(emoticon) = json["data"]["emoticon"].take() else {
+            return Err(Error::DataConversionError(
+                "the format of emoticon is unexpected".to_string(),
+            ));
+        };
+        for (_, groups) in emoticon {
+            let Value::Object(group) = groups else {
+                return Err(Error::DataConversionError(
+                    "the format of emoticon is unexpected".to_string(),
+                ));
+            };
+            for (_, emojis) in group {
+                let Value::Array(emojis) = emojis else {
+                    return Err(Error::DataConversionError(
+                        "the format of emoticon is unexpected".to_string(),
+                    ));
+                };
+                for mut emoji in emojis {
+                    let (Value::String(phrase), Value::String(url)) =
+                        (emoji["phrase"].take(), emoji["url"].take())
+                    else {
+                        return Err(Error::DataConversionError(
+                            "the format of emoticon is unexpected".to_string(),
+                        ));
+                    };
+                    res.insert(phrase, url);
+                }
+            }
+        }
+        Ok(res)
+    }
+
+    async fn fetch_from_mobile_api(&self) -> Result<HashMap<String, String>> {
         let params = serde_json::json!({
             "ct": "util",
             "a": "expression_all",
@@ -64,7 +125,6 @@ impl<C: HttpClient> EmojiUpdateAPI for WeiboAPIImpl<C> {
                 for emoji in data.data.card {
                     emoji_map.insert(emoji.key, emoji.url);
                 }
-                debug!("emoji update success, got {} emojis", emoji_map.len());
                 Ok(emoji_map)
             }
             EmojiUpdateResponse::Fail(err) => {
@@ -82,7 +142,7 @@ mod local_tests {
         mock::{MockClient, MockHttpResponse},
         session::Session,
     };
-    use std::{io::Read, path::Path};
+    use std::path::Path;
 
     #[tokio::test]
     async fn test_emoji_update() {
@@ -97,11 +157,7 @@ mod local_tests {
 
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
         let testcase_path = manifest_dir.join("tests/data/emoji.json");
-        let mut testcase_file = std::fs::File::open(testcase_path).unwrap();
-        let mut mock_response_body = String::new();
-        testcase_file
-            .read_to_string(&mut mock_response_body)
-            .unwrap();
+        let mock_response_body = std::fs::read_to_string(testcase_path).unwrap();
 
         let mock_response = MockHttpResponse::new(200, &mock_response_body);
         mock_client.expect_get(URL_EMOJI_UPDATE, mock_response);
@@ -120,15 +176,35 @@ mod local_tests {
 mod real_tests {
     use super::*;
     use crate::{client, session::Session, weibo_api::WeiboAPIImpl};
+    use std::path::Path;
+
+    #[tokio::test]
+    async fn test_real_web_emoticon() {
+        let session_file = Path::new(env!("CARGO_MANIFEST_DIR")).join("session.json");
+        let session = Session::load(session_file).unwrap();
+        let client = client::new_client_with_headers().unwrap();
+        let weibo_api = WeiboAPIImpl::from_session(client, session);
+        let emoji_map = weibo_api.fetch_from_web_api().await.unwrap();
+        assert!(!emoji_map.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_real_mobile_emoji() {
+        let session_file = Path::new(env!("CARGO_MANIFEST_DIR")).join("session.json");
+        let session = Session::load(session_file).unwrap();
+        let client = client::new_client_with_headers().unwrap();
+        let weibo_api = WeiboAPIImpl::from_session(client, session);
+        let emoji_map = weibo_api.fetch_from_mobile_api().await.unwrap();
+        assert!(!emoji_map.is_empty());
+    }
 
     #[tokio::test]
     async fn test_real_emoji_update() {
-        let session_file = "session.json";
-        if let Ok(session) = Session::load(session_file) {
-            let client = client::new_client_with_headers().unwrap();
-            let weibo_api = WeiboAPIImpl::from_session(client, session);
-            let emoji_map = weibo_api.emoji_update().await.unwrap();
-            assert!(!emoji_map.is_empty());
-        }
+        let session_file = Path::new(env!("CARGO_MANIFEST_DIR")).join("session.json");
+        let session = Session::load(session_file).unwrap();
+        let client = client::new_client_with_headers().unwrap();
+        let weibo_api = WeiboAPIImpl::from_session(client, session);
+        let emoji_map = weibo_api.emoji_update().await.unwrap();
+        assert!(!emoji_map.is_empty());
     }
 }
