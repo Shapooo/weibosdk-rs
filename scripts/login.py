@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import requests
+import json
 
 SENDCODE_URL = "https://api.weibo.cn/2/account/login"
 
@@ -43,6 +44,9 @@ try:
     result = response.json()
     print("请求成功，响应数据:")
     print(result)
+    json_txt = json.dumps(result, indent=2)
+    with open("login.json", "w") as f:
+        f.write(json_txt)
 
 except requests.exceptions.RequestException as e:
     print(f"请求失败: {e}")
