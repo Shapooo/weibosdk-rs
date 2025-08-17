@@ -230,14 +230,11 @@ mod local_tests {
     use crate::constants::urls::{URL_LOGIN, URL_SEND_CODE};
     use crate::mock::{MockClient, MockHttpResponse};
     use serde_json::json;
-    use std::io::Read;
 
     fn create_login_json_str() -> String {
         let response_path =
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/login.json");
-        let mut file = std::fs::File::open(response_path).unwrap();
-        let mut res = String::new();
-        file.read_to_string(&mut res).unwrap();
+        let res = std::fs::read_to_string(response_path).unwrap();
         res
     }
 

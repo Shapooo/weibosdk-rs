@@ -54,7 +54,7 @@ impl<C: HttpClient> LongTextAPI for WeiboAPIImpl<C> {
 
 #[cfg(test)]
 mod local_tests {
-    use std::{io::Read, path::Path};
+    use std::path::Path;
 
     use super::*;
     use crate::{
@@ -75,11 +75,7 @@ mod local_tests {
 
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
         let testcase_path = manifest_dir.join("tests/data/long_text.json");
-        let mut testcase_file = std::fs::File::open(testcase_path).unwrap();
-        let mut mock_response_body = String::new();
-        testcase_file
-            .read_to_string(&mut mock_response_body)
-            .unwrap();
+        let mock_response_body = std::fs::read_to_string(testcase_path).unwrap();
         let expect_long_text = serde_json::from_str::<StatusesShow>(&mock_response_body)
             .unwrap()
             .long_text

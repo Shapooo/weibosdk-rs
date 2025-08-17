@@ -215,15 +215,13 @@ pub fn parse_created_at(created_at: &str) -> Result<DateTime<FixedOffset>> {
 #[cfg(test)]
 mod local_tests {
     use super::*;
-    use std::{io::Read, path::Path};
+    use std::path::Path;
 
     #[test]
     fn test_deserialize_post_internal() {
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
         let testcase_path = manifest_dir.join("tests/data/favorites.json");
-        let mut testcase_file = std::fs::File::open(testcase_path).unwrap();
-        let mut response_body = String::new();
-        testcase_file.read_to_string(&mut response_body).unwrap();
+        let response_body = std::fs::read_to_string(testcase_path).unwrap();
         let mut value = serde_json::from_str::<Value>(&response_body).unwrap();
         value = value["favorites"].take();
         if let Value::Array(v) = value.take() {
