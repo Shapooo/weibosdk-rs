@@ -19,6 +19,7 @@ mod utils;
 #[cfg(any(feature = "test-mocks", test))]
 pub mod mock;
 
+pub use client::Client;
 pub use error::{Error, Result};
 pub use post::Post;
 pub use user::User;

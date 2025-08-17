@@ -97,7 +97,7 @@ mod real_tests {
     async fn test_real_get_long_text() {
         let session_file = "session.json";
         if let Ok(session) = Session::load(session_file) {
-            let client = client::new_client_with_headers().unwrap();
+            let client = client::Client::new().unwrap();
             let weibo_api = WeiboAPIImpl::from_session(client, session);
             let long_text = weibo_api.get_long_text(5179586393932632).await.unwrap();
             assert!(!long_text.is_empty());

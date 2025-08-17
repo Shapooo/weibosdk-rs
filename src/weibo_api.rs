@@ -133,6 +133,7 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
             });
             let session = execute_login(&self.client, &payload, self.config.retry_times).await?;
             info!("login success, user: {}", session.screen_name);
+            self.client.set_cookie(session.cookie_store.clone())?;
             self.login_state = LoginState::LoggedIn { session };
             Ok(())
         } else {
@@ -157,6 +158,7 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
             });
             let session = execute_login(&self.client, &payload, self.config.retry_times).await?;
             info!("login with session success, user: {}", session.screen_name);
+            self.client.set_cookie(session.cookie_store.clone())?;
             self.login_state = LoginState::LoggedIn { session };
             Ok(())
         } else {

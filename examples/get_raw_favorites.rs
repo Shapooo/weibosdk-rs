@@ -7,7 +7,7 @@ async fn main() {
     simple_logger::init_with_level(log::Level::Debug).unwrap();
 
     let session_file = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("session.json");
-    let client = weibosdk_rs::client::new_client_with_headers().unwrap();
+    let client = weibosdk_rs::client::Client::new().unwrap();
     let mut weibo_api = WeiboAPIImpl::new(client, Default::default());
 
     if let Ok(session) = Session::load(&session_file) {

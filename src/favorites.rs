@@ -163,7 +163,7 @@ mod real_tests {
     async fn test_real_favorites() {
         let session_file = "session.json";
         if let Ok(session) = Session::load(session_file) {
-            let client = client::new_client_with_headers().unwrap();
+            let client = client::Client::new().unwrap();
             let weibo_api = WeiboAPIImpl::from_session(client, session);
             let _ = weibo_api.favorites(1).await.unwrap();
         }

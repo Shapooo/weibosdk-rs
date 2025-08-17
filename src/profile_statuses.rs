@@ -175,7 +175,7 @@ mod real_tests {
     async fn test_real_profile_statuses() {
         let session_file = "session.json";
         if let Ok(session) = Session::load(session_file) {
-            let client = client::new_client_with_headers().unwrap();
+            let client = client::Client::new().unwrap();
             let weibo_api = WeiboAPIImpl::from_session(client, session);
             let posts = weibo_api.profile_statuses(1401527553, 1).await.unwrap();
             assert!(!posts.is_empty());

@@ -167,6 +167,10 @@ impl HttpClient for MockClient {
             Error::DataConversionError(format!("No mock response set for URL: {url}"))
         })
     }
+
+    fn set_cookie(&mut self, _cookie_store: reqwest_cookie_store::CookieStore) -> Result<()> {
+        Ok(())
+    }
 }
 
 #[cfg(test)]
