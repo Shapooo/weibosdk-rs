@@ -21,7 +21,9 @@ pub struct Post {
     pub url_struct: Option<Value>,
     pub topic_struct: Option<Value>,
     pub tag_struct: Option<Value>,
-    pub number_display_strategy: Option<Value>,
+    pub common_struct: Option<Value>,
+    #[serde(default, deserialize_with = "deserialize_ids")]
+    pub mix_media_ids: Option<Vec<String>>,
     pub mix_media_info: Option<Value>,
     pub text: String,
     #[serde(default)]
