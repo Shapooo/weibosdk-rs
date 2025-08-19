@@ -1,4 +1,5 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+
 /** 用户数据
  * 从微博 API 获取的每条 post 会附带 user 字段，原始数据为 Json 格式，包含如下字段：
  * avatar_hd            高清头像URL，字符串格式
@@ -26,16 +27,26 @@ use serde::Serialize;
  * 在上万份样本中只有两份出现了 vclub_member 且值都为1，所以忽略了该字段
  * 添加 backedup 字段，用于标识已经备份过的用户
  */
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct User {
+    #[serde(default)]
     pub id: i64,
+    #[serde(default)]
     pub screen_name: String,
+    #[serde(default)]
     pub profile_image_url: String,
+    #[serde(default)]
     pub avatar_large: String,
+    #[serde(default)]
     pub avatar_hd: String,
+    #[serde(default)]
     pub verified: bool,
+    #[serde(default)]
     pub verified_type: i64,
+    #[serde(default)]
     pub domain: String,
+    #[serde(default)]
     pub follow_me: bool,
+    #[serde(default)]
     pub following: bool,
 }
