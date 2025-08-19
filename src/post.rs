@@ -73,6 +73,8 @@ where
 }
 
 mod datetime {
+    use std::borrow::Cow;
+
     use chrono::{DateTime, FixedOffset};
     use serde::{Deserialize, Deserializer, Serializer};
 
@@ -87,8 +89,8 @@ mod datetime {
     where
         D: Deserializer<'de>,
     {
-        let created_at = <&str>::deserialize(deserializer)?;
-        match DateTime::parse_from_str(created_at, "%a %b %d %T %z %Y") {
+        let created_at = Cow::<'_, str>::deserialize(deserializer)?;
+        match DateTime::parse_from_str(&created_at, "%a %b %d %T %z %Y") {
             Ok(dt) => Ok(dt),
             Err(e) => Err(serde::de::Error::custom(e)),
         }
