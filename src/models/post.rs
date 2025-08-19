@@ -4,6 +4,7 @@ use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use super::url_struct::UrlStruct;
 use crate::User;
 use crate::models::pic_infos::PicInfoItem;
 
@@ -18,7 +19,7 @@ pub struct Post {
     #[serde(default, deserialize_with = "deserialize_ids")]
     pub pic_ids: Option<Vec<String>>,
     pub pic_num: Option<i64>,
-    pub url_struct: Option<Value>,
+    pub url_struct: Option<UrlStruct>,
     pub topic_struct: Option<Value>,
     pub tag_struct: Option<Value>,
     pub common_struct: Option<Value>,
