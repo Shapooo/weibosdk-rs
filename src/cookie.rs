@@ -19,7 +19,7 @@ pub struct Cookie {
 impl TryFrom<Cookie> for CookieStore {
     type Error = Error;
     fn try_from(value: Cookie) -> std::result::Result<Self, Self::Error> {
-        let mut cookie_store = CookieStore::new(None);
+        let mut cookie_store = CookieStore::new();
         for (domain, cookie) in value.cookie.iter() {
             let url =
                 std::borrow::Cow::Borrowed("https://") + domain.strip_prefix('.').unwrap_or(domain);
