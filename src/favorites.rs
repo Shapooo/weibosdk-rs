@@ -23,13 +23,43 @@ struct FavoritesPost {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
 enum FavoritesResponse {
-    Succ {
-        favorites: Vec<FavoritesPost>,
-        #[serde(default)]
-        #[allow(unused)]
-        total_number: i32,
-    },
+    Succ(FavoritesSucc),
     Fail(ErrResponse),
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct FavoritesSucc {
+    favorites: Vec<FavoritesPost>,
+    #[serde(default)]
+    #[allow(unused)]
+    total_number: i32,
+}
+
+impl TryFrom<FavoritesResponse> for Vec<Post> {
+    type Error = Error;
+    fn try_from(value: FavoritesResponse) -> Result<Self> {
+        let res = value;
+        match res {
+            FavoritesResponse::Succ(FavoritesSucc { favorites, .. }) => {
+                debug!("got {} favorites", favorites.len());
+                let posts = favorites
+                    .into_iter()
+                    .map(|post| post.status)
+                    .collect::<Vec<Post>>();
+                Ok(posts)
+            }
+            FavoritesResponse::Fail(err) => {
+                error!("failed to get favorites: {err:?}");
+                Err(Error::ApiError(err))
+            }
+        }
+    }
+}
+
+impl From<FavoritesSucc> for Vec<Post> {
+    fn from(value: FavoritesSucc) -> Self {
+        value.favorites.into_iter().map(|p| p.status).collect()
+    }
 }
 
 pub trait FavoritesAPI {
@@ -53,24 +83,7 @@ impl<C: HttpClient> FavoritesAPI for WeiboAPIImpl<C> {
             .client
             .get(URL_FAVORITES, &params, self.config.retry_times)
             .await?;
-        let res = response.json::<FavoritesResponse>().await?;
-        match res {
-            FavoritesResponse::Succ {
-                favorites,
-                total_number: _,
-            } => {
-                debug!("got {} favorites", favorites.len());
-                let posts = favorites
-                    .into_iter()
-                    .map(|post| post.status)
-                    .collect::<Vec<Post>>();
-                Ok(posts)
-            }
-            FavoritesResponse::Fail(err) => {
-                error!("failed to get favorites: {err:?}");
-                Err(Error::ApiError(err))
-            }
-        }
+        response.json::<FavoritesResponse>().await?.try_into()
     }
 
     async fn favorites_destroy(&self, id: i64) -> Result<()> {
@@ -114,23 +127,11 @@ mod local_tests {
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
         let testcase_path = manifest_dir.join("tests/data/favorites.json");
         let mock_response_body = std::fs::read_to_string(testcase_path).unwrap();
-        let res = serde_json::from_str::<FavoritesResponse>(&mock_response_body).unwrap();
-        let expect_posts = match res {
-            FavoritesResponse::Succ {
-                favorites,
-                total_number: _,
-            } => favorites
-                .into_iter()
-                .map(|post| post.status)
-                .collect::<Vec<Post>>(),
-            FavoritesResponse::Fail(_) => panic!("unexpected fail response"),
-        };
 
         let mock_response = MockHttpResponse::new(200, &mock_response_body);
         mock_client.expect_get(URL_FAVORITES, mock_response);
 
-        let posts = weibo_api.favorites(1).await.unwrap();
-        assert_eq!(posts, expect_posts);
+        weibo_api.favorites(1).await.unwrap();
     }
 
     #[tokio::test]

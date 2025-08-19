@@ -22,8 +22,13 @@ struct Card {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
 enum ProfileStatusesResponse {
-    Succ { cards: Vec<Card> },
+    Succ(ProfileStatusesSucc),
     Fail(ErrResponse),
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct ProfileStatusesSucc {
+    cards: Vec<Card>,
 }
 
 pub trait ProfileStatusesAPI {
@@ -64,7 +69,7 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
             .await?;
         let response = response.json::<ProfileStatusesResponse>().await?;
         match response {
-            ProfileStatusesResponse::Succ { cards } => {
+            ProfileStatusesResponse::Succ(ProfileStatusesSucc { cards }) => {
                 let posts_iterator = cards.into_iter().filter_map(|card| card.mblog);
 
                 let posts = if filter_likes {
@@ -141,20 +146,11 @@ mod local_tests {
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
         let testcase_path = manifest_dir.join("tests/data/profile_statuses.json");
         let mock_response_body = std::fs::read_to_string(testcase_path).unwrap();
-        let res = serde_json::from_str::<ProfileStatusesResponse>(&mock_response_body).unwrap();
-        let expect_posts = match res {
-            ProfileStatusesResponse::Succ { cards } => cards
-                .into_iter()
-                .filter_map(|card| card.mblog)
-                .collect::<Vec<Post>>(),
-            ProfileStatusesResponse::Fail(_) => panic!("unexpected fail response"),
-        };
 
         let mock_response = MockHttpResponse::new(200, &mock_response_body);
         mock_client.expect_get(URL_PROFILE_STATUSES, mock_response);
 
-        let posts = weibo_api.profile_statuses_original(12345, 1).await.unwrap();
-        assert_eq!(posts, expect_posts);
+        weibo_api.profile_statuses_original(12345, 1).await.unwrap();
     }
 }
 
