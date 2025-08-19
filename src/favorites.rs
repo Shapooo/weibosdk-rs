@@ -11,14 +11,13 @@ use crate::{
     },
     err_response::ErrResponse,
     error::{Error, Result},
-    internal::post::PostInternal,
     utils,
     weibo_api::WeiboAPIImpl,
 };
 
 #[derive(Debug, Clone, Deserialize)]
 struct FavoritesPost {
-    pub status: PostInternal,
+    pub status: Post,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -63,8 +62,8 @@ impl<C: HttpClient> FavoritesAPI for WeiboAPIImpl<C> {
                 debug!("got {} favorites", favorites.len());
                 let posts = favorites
                     .into_iter()
-                    .map(|post| post.status.try_into())
-                    .collect::<Result<Vec<Post>>>()?;
+                    .map(|post| post.status)
+                    .collect::<Vec<Post>>();
                 Ok(posts)
             }
             FavoritesResponse::Fail(err) => {
@@ -122,9 +121,8 @@ mod local_tests {
                 total_number: _,
             } => favorites
                 .into_iter()
-                .map(|post| post.status.try_into())
-                .collect::<Result<Vec<Post>>>()
-                .unwrap(),
+                .map(|post| post.status)
+                .collect::<Vec<Post>>(),
             FavoritesResponse::Fail(_) => panic!("unexpected fail response"),
         };
 

@@ -8,7 +8,6 @@ use crate::{
     constants::{params::*, urls::*},
     err_response::ErrResponse,
     error::{Error, Result},
-    internal::post::PostInternal,
     utils,
     weibo_api::WeiboAPIImpl,
 };
@@ -17,7 +16,7 @@ use crate::{
 struct Card {
     #[allow(unused)]
     card_type: i32,
-    mblog: Option<PostInternal>,
+    mblog: Option<Post>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -68,17 +67,12 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
             ProfileStatusesResponse::Succ { cards } => {
                 let posts_iterator = cards.into_iter().filter_map(|card| card.mblog);
 
-                let map_to_post = |post: PostInternal| post.try_into();
-
                 let posts = if filter_likes {
                     posts_iterator
                         .filter(|post| post.user.as_ref().is_none_or(|u| u.id == uid))
-                        .map(map_to_post)
-                        .collect::<Result<Vec<Post>>>()?
+                        .collect::<Vec<Post>>()
                 } else {
-                    posts_iterator
-                        .map(map_to_post)
-                        .collect::<Result<Vec<Post>>>()?
+                    posts_iterator.collect::<Vec<Post>>()
                 };
                 debug!("got {} posts", posts.len());
                 Ok(posts)
@@ -152,9 +146,7 @@ mod local_tests {
             ProfileStatusesResponse::Succ { cards } => cards
                 .into_iter()
                 .filter_map(|card| card.mblog)
-                .map(|card| card.try_into())
-                .collect::<Result<Vec<Post>>>()
-                .unwrap(),
+                .collect::<Vec<Post>>(),
             ProfileStatusesResponse::Fail(_) => panic!("unexpected fail response"),
         };
 
