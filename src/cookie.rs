@@ -28,7 +28,7 @@ impl TryFrom<Cookie> for CookieStore {
                     error!("{url} parse failed: {e}");
                 })
                 .unwrap();
-            for cookie in cookie.lines().map(|c| parse_cookie(c)) {
+            for cookie in cookie.lines().map(parse_cookie) {
                 cookie_store
                     .insert_raw(&cookie?, &request_url)
                     .map_err(|e| {
@@ -52,7 +52,7 @@ fn parse_cookie<'a>(cookie: &'a str) -> Result<RawCookie<'a>> {
         .expect("first str::split().next() returns Some");
     let (name, value) = match key_value.find('=') {
         Some(i) => (key_value[..i].trim(), key_value[(i + 1)..].trim()),
-        None => return Err(Error::DataConversionError(format!("Error::MissingPair",))),
+        None => return Err(Error::DataConversionError("Error::MissingPair".to_string())),
     };
 
     if name.is_empty() {
@@ -79,7 +79,7 @@ fn parse_cookie<'a>(cookie: &'a str) -> Result<RawCookie<'a>> {
                         v = &v[1..];
                     }
 
-                    if !v.chars().all(|d| d.is_digit(10)) {
+                    if !v.chars().all(|d| d.is_ascii_digit()) {
                         continue;
                     }
 
@@ -90,7 +90,7 @@ fn parse_cookie<'a>(cookie: &'a str) -> Result<RawCookie<'a>> {
                     } else {
                         v.parse::<i64>()
                             .map(Duration::seconds)
-                            .unwrap_or_else(|_| Duration::seconds(i64::max_value()))
+                            .unwrap_or_else(|_| Duration::seconds(i64::MAX))
                     }
                 };
                 cookie = cookie.max_age(max_age);

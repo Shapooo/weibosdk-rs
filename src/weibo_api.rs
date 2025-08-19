@@ -215,16 +215,14 @@ impl TryFrom<LoginResponse> for Session {
     }
 }
 
-async fn execute_login<'a, 'b, C: HttpClient, P: Serialize + Send + Sync>(
-    client: &'b C,
-    payload: &'b P,
+async fn execute_login<'a, C: HttpClient, P: Serialize + Send + Sync>(
+    client: &'a C,
+    payload: &'a P,
     retry_times: u8,
 ) -> Result<Session> {
     let response = client.post(URL_LOGIN, payload, retry_times).await?;
 
-    let response = response.json::<LoginResponse>().await?;
-
-    Ok(response.try_into()?)
+    response.json::<LoginResponse>().await?.try_into()
 }
 
 #[cfg(test)]
