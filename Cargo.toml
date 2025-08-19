@@ -6,7 +6,6 @@ edition = "2024"
 [dependencies]
 bytes = "1"
 chrono = "0.4"
-cookie = "0.18"
 log = "0.4"
 reqwest = { version = "0.12", features = ["json", "cookies", "gzip"] }
 reqwest_cookie_store = "0.9"
