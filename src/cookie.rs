@@ -3,7 +3,7 @@
 /// Some code snippts copied from https://github.com/rwf2/cookie-rs/blob/master/src/parse.rs
 use std::collections::HashMap;
 
-use log::error;
+use log::{error, warn};
 use reqwest_cookie_store::{CookieStore, RawCookie};
 use serde::Deserialize;
 use time::{OffsetDateTime, PrimitiveDateTime, macros::format_description};
@@ -28,13 +28,11 @@ impl TryFrom<Cookie> for CookieStore {
                 })
                 .unwrap();
             for cookie in cookie.lines().map(parse_cookie) {
-                cookie_store
+                let _ = cookie_store
                     .insert_raw(&cookie?, &request_url)
                     .map_err(|e| {
-                        error!("cookie of {url} insert failed: {e}");
-                        e
-                    })
-                    .unwrap();
+                        warn!("cookie of {url} insert failed: {e}");
+                    });
             }
         }
 
