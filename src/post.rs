@@ -5,8 +5,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::User;
+use crate::pic_infos::PicInfoItem;
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Post {
     pub id: i64,
     pub mblogid: String,
@@ -27,7 +28,7 @@ pub struct Post {
     pub attitudes_status: i64,
     #[serde(default)]
     pub favorited: bool,
-    pub pic_infos: Option<HashMap<String, Value>>,
+    pub pic_infos: Option<HashMap<String, PicInfoItem>>,
     pub reposts_count: Option<i64>,
     pub comments_count: Option<i64>,
     pub attitudes_count: Option<i64>,

@@ -5,6 +5,7 @@ pub mod err_response;
 pub mod error;
 pub mod favorites;
 pub mod long_text;
+pub mod pic_infos;
 pub mod post;
 pub mod profile_statuses;
 pub mod session;
