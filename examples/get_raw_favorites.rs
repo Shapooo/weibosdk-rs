@@ -1,6 +1,6 @@
 use simple_logger;
 use std::io::{self, Write};
-use weibosdk_rs::{favorites::FavoritesAPI, session::Session, weibo_api::WeiboAPIImpl};
+use weibosdk_rs::{FavoritesAPI, WeiboAPIImpl, session::Session};
 
 #[tokio::main]
 async fn main() {

@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::err_response::ErrResponse;
+use crate::models::err_response::ErrResponse;
 
 #[derive(Error, Debug)]
 pub enum Error {

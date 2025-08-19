@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::User;
-use crate::pic_infos::PicInfoItem;
+use crate::models::pic_infos::PicInfoItem;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Post {

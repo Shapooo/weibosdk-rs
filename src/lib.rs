@@ -1,35 +1,33 @@
 pub mod client;
 pub mod config;
-pub mod emoji;
-pub mod err_response;
 pub mod error;
-pub mod favorites;
-pub mod long_text;
-pub mod pic_infos;
-pub mod post;
-pub mod profile_statuses;
+pub mod models;
 pub mod session;
-pub mod user;
-pub mod weibo_api;
 
 mod constants;
 mod cookie;
-mod internal;
+mod emoji;
+mod favorites;
+mod profile_statuses;
 mod utils;
+mod weibo_api;
 
 #[cfg(any(feature = "test-mocks", test))]
 pub mod mock;
 
 pub use client::Client;
+pub use emoji::EmojiUpdateAPI;
 pub use error::{Error, Result};
-pub use post::Post;
-pub use user::User;
+pub use favorites::FavoritesAPI;
+pub use models::long_text::LongTextAPI;
+pub use models::{post::Post, user::User};
+pub use profile_statuses::ProfileStatusesAPI;
 pub use weibo_api::WeiboAPIImpl;
 
 pub trait WeiboAPI:
     emoji::EmojiUpdateAPI
     + favorites::FavoritesAPI
-    + long_text::LongTextAPI
+    + models::long_text::LongTextAPI
     + profile_statuses::ProfileStatusesAPI
     + Send
     + Sync

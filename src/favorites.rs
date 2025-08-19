@@ -9,8 +9,8 @@ use crate::{
         params::*,
         urls::{URL_FAVORITES, URL_FAVORITES_DESTROY},
     },
-    err_response::ErrResponse,
     error::{Error, Result},
+    models::err_response::ErrResponse,
     utils,
     weibo_api::WeiboAPIImpl,
 };

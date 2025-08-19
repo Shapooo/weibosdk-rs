@@ -5,9 +5,9 @@ use serde::Deserialize;
 use crate::{
     client::{HttpClient, HttpResponse},
     constants::{params::*, urls::URL_STATUSES_SHOW},
-    err_response::ErrResponse,
     error::{Error, Result},
-    internal::statuses_show::StatusesShow,
+    models::err_response::ErrResponse,
+    models::statuses_show::StatusesShow,
     utils,
     weibo_api::WeiboAPIImpl,
 };

@@ -9,8 +9,8 @@ use crate::constants::{
     params::{LANG, UA},
     urls::{URL_EMOJI_UPDATE, URL_WEB_EMOTICON},
 };
-use crate::err_response::ErrResponse;
 use crate::error::{Error, Result};
+use crate::models::err_response::ErrResponse;
 use crate::utils;
 use crate::weibo_api::WeiboAPIImpl;
 

@@ -10,8 +10,8 @@ use crate::{
         params::*,
         urls::{URL_LOGIN, URL_SEND_CODE},
     },
-    err_response::ErrResponse,
     error::{Error, Result},
+    models::err_response::ErrResponse,
     session::Session,
 };
 
