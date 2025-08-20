@@ -4,6 +4,8 @@ use std::result::Result;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 
+use crate::utils::deserialize_str_num;
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct UrlStruct(Vec<UrlStructItem>);
 
@@ -38,10 +40,10 @@ pub struct PicInfosForStatus {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct DefDetail {
     #[serde(deserialize_with = "deserialize_str_num")]
-    pub height: u32,
+    height: i32,
     #[serde(deserialize_with = "deserialize_str_num")]
-    pub width: u32,
-    pub url: String,
+    width: i32,
+    url: String,
 }
 
 fn deserialize_url_type<'de, D>(deserializer: D) -> Result<Option<u8>, D::Error>
@@ -67,20 +69,4 @@ where
             .into_values()
             .next(),
     )
-}
-
-fn deserialize_str_num<'de, D>(deserializer: D) -> Result<u32, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum Either {
-        Str(String),
-        Num(u32),
-    }
-    match Either::deserialize(deserializer)? {
-        Either::Str(s) => s.parse().map_err(|e| serde::de::Error::custom(e)),
-        Either::Num(n) => Ok(n),
-    }
 }

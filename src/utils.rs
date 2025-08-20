@@ -1,3 +1,6 @@
+use std::borrow::Cow;
+
+use serde::{Deserialize, Deserializer};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha512};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -52,6 +55,22 @@ fn generate_s_(uid: &str, pin: &str, from: &str) -> String {
         res.push(hash1[i as usize]);
     }
     res
+}
+
+pub fn deserialize_str_num<'de, D>(deserializer: D) -> std::result::Result<i32, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Either<'a> {
+        Str(Cow<'a, str>),
+        Num(i32),
+    }
+    match Either::deserialize(deserializer)? {
+        Either::Str(s) => s.parse().map_err(|e| serde::de::Error::custom(e)),
+        Either::Num(n) => Ok(n),
+    }
 }
 
 #[cfg(test)]

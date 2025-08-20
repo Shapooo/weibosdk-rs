@@ -4,7 +4,7 @@ use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use super::url_struct::UrlStruct;
+use super::{mix_media_info::MixMediaInfo, url_struct::UrlStruct};
 use crate::User;
 use crate::models::pic_infos::PicInfoItem;
 
@@ -25,7 +25,7 @@ pub struct Post {
     pub common_struct: Option<Value>,
     #[serde(default, deserialize_with = "deserialize_ids")]
     pub mix_media_ids: Option<Vec<String>>,
-    pub mix_media_info: Option<Value>,
+    pub mix_media_info: Option<MixMediaInfo>,
     pub text: String,
     #[serde(default)]
     pub attitudes_status: i64,
