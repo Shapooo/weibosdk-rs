@@ -7,10 +7,28 @@ use crate::{
     constants::{params::*, urls::URL_STATUSES_SHOW},
     error::{Error, Result},
     models::err_response::ErrResponse,
-    models::statuses_show::StatusesShow,
     utils,
     weibo_api::WeiboAPIImpl,
 };
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct LongText {
+    pub content: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct EditConfig {
+    #[allow(unused)]
+    pub edited: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct StatusesShow {
+    #[allow(unused)]
+    pub edit_config: EditConfig,
+    #[serde(rename = "longText")]
+    pub long_text: LongText,
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]

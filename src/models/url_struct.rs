@@ -4,10 +4,10 @@ use std::result::Result;
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
 
-use crate::utils::deserialize_str_num;
+use super::PicInfoDetail;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct UrlStruct(Vec<UrlStructItem>);
+pub struct UrlStruct(pub Vec<UrlStructItem>);
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct UrlStructItem {
@@ -31,19 +31,10 @@ pub struct UrlStructItem {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct PicInfosForStatus {
-    pub bmiddle: DefDetail,
-    pub large: DefDetail,
-    pub thumbnail: DefDetail,
-    pub woriginal: DefDetail,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct DefDetail {
-    #[serde(deserialize_with = "deserialize_str_num")]
-    height: i32,
-    #[serde(deserialize_with = "deserialize_str_num")]
-    width: i32,
-    url: String,
+    pub bmiddle: PicInfoDetail,
+    pub large: PicInfoDetail,
+    pub thumbnail: PicInfoDetail,
+    pub woriginal: PicInfoDetail,
 }
 
 fn deserialize_url_type<'de, D>(deserializer: D) -> Result<Option<u8>, D::Error>

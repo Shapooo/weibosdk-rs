@@ -6,7 +6,7 @@ use crate::{
     emoji::EmojiUpdateAPI,
     error::Result,
     favorites::FavoritesAPI,
-    models::long_text::LongTextAPI,
+    long_text::LongTextAPI,
     models::post::Post,
     profile_statuses::ProfileStatusesAPI,
     session::Session,
