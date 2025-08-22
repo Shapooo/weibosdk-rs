@@ -181,7 +181,8 @@ mod real_tests {
         let session_file = Path::new(env!("CARGO_MANIFEST_DIR")).join("session.json");
         let session = Session::load(session_file).unwrap();
         let client = client::Client::new().unwrap();
-        let weibo_api = WeiboAPIImpl::from_session(client, session);
+        let mut weibo_api = WeiboAPIImpl::new(client, Default::default());
+        weibo_api.login_with_session(session).await.unwrap();
         let emoji_map = weibo_api.fetch_from_web_api().await.unwrap();
         assert!(!emoji_map.is_empty());
     }
@@ -191,7 +192,8 @@ mod real_tests {
         let session_file = Path::new(env!("CARGO_MANIFEST_DIR")).join("session.json");
         let session = Session::load(session_file).unwrap();
         let client = client::Client::new().unwrap();
-        let weibo_api = WeiboAPIImpl::from_session(client, session);
+        let mut weibo_api = WeiboAPIImpl::new(client, Default::default());
+        weibo_api.login_with_session(session).await.unwrap();
         let emoji_map = weibo_api.fetch_from_mobile_api().await.unwrap();
         assert!(!emoji_map.is_empty());
     }
@@ -201,7 +203,8 @@ mod real_tests {
         let session_file = Path::new(env!("CARGO_MANIFEST_DIR")).join("session.json");
         let session = Session::load(session_file).unwrap();
         let client = client::Client::new().unwrap();
-        let weibo_api = WeiboAPIImpl::from_session(client, session);
+        let mut weibo_api = WeiboAPIImpl::new(client, Default::default());
+        weibo_api.login_with_session(session).await.unwrap();
         let emoji_map = weibo_api.emoji_update().await.unwrap();
         assert!(!emoji_map.is_empty());
     }
