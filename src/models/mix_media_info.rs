@@ -9,24 +9,10 @@ pub struct MixMediaInfo {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct MixMediaInfoItem {
-    pub data: MixMediaInfoData,
-    pub id: String,
-    pub scheme: String,
-    pub r#type: MixMediaInfoType,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(untagged)]
-pub enum MixMediaInfoData {
-    PicInfo(Box<PicInfoItem>),
-    HugeInfo(Box<HugeInfo>),
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub enum MixMediaInfoType {
+#[serde(tag = "type")]
+pub enum MixMediaInfoItem {
     #[serde(rename = "pic")]
-    Pic,
+    Pic { id: String, data: Box<PicInfoItem> },
     #[serde(rename = "video")]
-    Video,
+    Video { id: String, data: Box<HugeInfo> },
 }
