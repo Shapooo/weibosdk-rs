@@ -9,7 +9,7 @@ pub mod user;
 
 mod build_comments;
 
-pub use common::{HugeInfo, VideoInfo, Orientation, PicInfoDetail, PicInfoItemSimple};
+pub use common::{HugeInfo, Orientation, PicInfoDetail, PicInfoItemSimple, VideoInfo};
 pub use err_response::ErrResponse;
 pub use mix_media_info::{MixMediaInfo, MixMediaInfoItem};
 pub use pic_infos::{FocusPoint, PicInfoItem, PicInfoType};

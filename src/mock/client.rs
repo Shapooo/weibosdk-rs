@@ -124,11 +124,11 @@ impl MockClient {
         self._expect_post_from_file(URL_LOGIN, path)
     }
 
-    pub fn set_long_text_response_from_str(&self, content: &str) {
+    pub fn set_statuses_show_response_from_str(&self, content: &str) {
         self._expect_get_from_str(URL_STATUSES_SHOW, content)
     }
 
-    pub fn set_long_text_response_from_file(&self, path: &Path) -> std::io::Result<()> {
+    pub fn set_statuses_show_response_from_file(&self, path: &Path) -> std::io::Result<()> {
         self._expect_get_from_file(URL_STATUSES_SHOW, path)
     }
 
@@ -299,9 +299,9 @@ mod local_tests {
     );
 
     test_setter!(
-        test_set_long_text,
-        set_long_text_response_from_str,
-        set_long_text_response_from_file,
+        test_set_statuses_show,
+        set_statuses_show_response_from_str,
+        set_statuses_show_response_from_file,
         URL_STATUSES_SHOW,
         true
     );

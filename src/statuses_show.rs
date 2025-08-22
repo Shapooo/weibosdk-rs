@@ -2,7 +2,7 @@
 use log::{debug, error, info};
 use serde::Deserialize;
 
-use crate::models::post::LongText;
+use crate::models::post::Post;
 
 use crate::{
     client::{HttpClient, HttpResponse},
@@ -19,27 +19,19 @@ pub struct EditConfig {
     pub edited: bool,
 }
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct StatusesShow {
-    #[allow(unused)]
-    pub edit_config: EditConfig,
-    #[serde(rename = "longText")]
-    pub long_text: LongText,
-}
-
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
-enum LongTextResponse {
-    Succ(StatusesShow),
+enum StatusesShowResponse {
+    Succ(Post),
     Fail(ErrResponse),
 }
 
-pub trait LongTextAPI {
-    async fn get_long_text(&self, id: i64) -> Result<String>;
+pub trait StatusesShowAPI {
+    async fn statuses_show(&self, id: i64) -> Result<Post>;
 }
 
-impl<C: HttpClient> LongTextAPI for WeiboAPIImpl<C> {
-    async fn get_long_text(&self, id: i64) -> Result<String> {
+impl<C: HttpClient> StatusesShowAPI for WeiboAPIImpl<C> {
+    async fn statuses_show(&self, id: i64) -> Result<Post> {
         info!("getting long text, id: {id}");
         let session = self.session()?;
         let s = utils::generate_s(&session.uid, FROM);
@@ -53,13 +45,13 @@ impl<C: HttpClient> LongTextAPI for WeiboAPIImpl<C> {
             .client
             .get(URL_STATUSES_SHOW, &params, self.config.retry_times)
             .await?;
-        let res = response.json::<LongTextResponse>().await?;
+        let res = response.json::<StatusesShowResponse>().await?;
         match res {
-            LongTextResponse::Succ(statuses_show) => {
-                debug!("got long text success");
-                Ok(statuses_show.long_text.content)
+            StatusesShowResponse::Succ(statuses_show) => {
+                debug!("got statuses success");
+                Ok(statuses_show)
             }
-            LongTextResponse::Fail(err) => {
+            StatusesShowResponse::Fail(err) => {
                 error!("failed to get long text: {err:?}");
                 Err(Error::ApiError(err))
             }
@@ -78,7 +70,7 @@ mod local_tests {
     };
 
     #[tokio::test]
-    async fn test_get_long_text() {
+    async fn test_get_statuses_show() {
         let mock_client = MockClient::new();
         let session = Session {
             gsid: "test_gsid".to_string(),
@@ -89,17 +81,12 @@ mod local_tests {
         let weibo_api = WeiboAPIImpl::from_session(mock_client.clone(), session);
 
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-        let testcase_path = manifest_dir.join("tests/data/long_text.json");
+        let testcase_path = manifest_dir.join("tests/data/statuses_show.json");
         let mock_response_body = std::fs::read_to_string(testcase_path).unwrap();
-        let expect_long_text = serde_json::from_str::<StatusesShow>(&mock_response_body)
-            .unwrap()
-            .long_text
-            .content;
         let mock_response = MockHttpResponse::new(200, &mock_response_body);
         mock_client.expect_get(URL_STATUSES_SHOW, mock_response);
 
-        let long_text = weibo_api.get_long_text(12345).await.unwrap();
-        assert_eq!(long_text, expect_long_text);
+        let _post = weibo_api.statuses_show(12345).await.unwrap();
     }
 }
 
@@ -109,13 +96,13 @@ mod real_tests {
     use crate::{client, session::Session, weibo_api::WeiboAPIImpl};
 
     #[tokio::test]
-    async fn test_real_get_long_text() {
+    async fn test_real_get_statuses_show() {
         let session_file = "session.json";
         if let Ok(session) = Session::load(session_file) {
             let client = client::Client::new().unwrap();
             let weibo_api = WeiboAPIImpl::from_session(client, session);
-            let long_text = weibo_api.get_long_text(5179586393932632).await.unwrap();
-            assert!(!long_text.is_empty());
+            let post = weibo_api.statuses_show(5179586393932632).await.unwrap();
+            assert!(!post.long_text.unwrap().content.is_empty());
         }
     }
 }

@@ -6,10 +6,10 @@ use crate::{
     emoji::EmojiUpdateAPI,
     error::Result,
     favorites::FavoritesAPI,
-    long_text::LongTextAPI,
     models::post::Post,
     profile_statuses::ProfileStatusesAPI,
     session::Session,
+    statuses_show::StatusesShowAPI,
     weibo_api::{LoginState, WeiboAPIImpl},
 };
 
@@ -66,9 +66,9 @@ impl FavoritesAPI for MockAPI {
     }
 }
 
-impl LongTextAPI for MockAPI {
-    async fn get_long_text(&self, id: i64) -> Result<String> {
-        self.client.get_long_text(id).await
+impl StatusesShowAPI for MockAPI {
+    async fn statuses_show(&self, id: i64) -> Result<Post> {
+        self.client.statuses_show(id).await
     }
 }
 
@@ -187,13 +187,13 @@ mod local_tests {
     }
 
     #[tokio::test]
-    async fn test_get_long_text() {
+    async fn test_get_statuses_show() {
         let (mock_client, api) = create_logged_in_api();
         mock_client
-            .set_long_text_response_from_file(&get_test_data_path("long_text.json"))
+            .set_statuses_show_response_from_file(&get_test_data_path("statuses_show.json"))
             .unwrap();
-        let result = api.get_long_text(123).await.unwrap();
-        assert!(!result.is_empty());
+        let result = api.statuses_show(123).await.unwrap();
+        assert!(!result.long_text.unwrap().content.is_empty());
     }
 
     #[tokio::test]

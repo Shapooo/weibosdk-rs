@@ -1,9 +1,9 @@
 pub mod client;
 pub mod config;
 pub mod error;
-pub mod long_text;
 pub mod models;
 pub mod session;
+pub mod statuses_show;
 pub mod weibo_api;
 
 mod constants;
@@ -20,15 +20,15 @@ pub use client::Client;
 pub use emoji::EmojiUpdateAPI;
 pub use error::{Error, Result};
 pub use favorites::FavoritesAPI;
-pub use long_text::LongTextAPI;
 pub use models::{post::Post, user::User};
 pub use profile_statuses::ProfileStatusesAPI;
+pub use statuses_show::StatusesShowAPI;
 pub use weibo_api::WeiboAPIImpl;
 
 pub trait WeiboAPI:
     emoji::EmojiUpdateAPI
     + favorites::FavoritesAPI
-    + long_text::LongTextAPI
+    + statuses_show::StatusesShowAPI
     + profile_statuses::ProfileStatusesAPI
     + Send
     + Sync
