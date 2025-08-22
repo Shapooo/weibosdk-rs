@@ -2,6 +2,8 @@
 use log::{debug, error, info};
 use serde::Deserialize;
 
+use crate::models::post::LongText;
+
 use crate::{
     client::{HttpClient, HttpResponse},
     constants::{params::*, urls::URL_STATUSES_SHOW},
@@ -10,11 +12,6 @@ use crate::{
     utils,
     weibo_api::WeiboAPIImpl,
 };
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct LongText {
-    pub content: String,
-}
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct EditConfig {

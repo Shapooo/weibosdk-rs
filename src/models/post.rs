@@ -10,39 +10,41 @@ use crate::models::pic_infos::PicInfoItem;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Post {
-    pub id: i64,
-    pub mblogid: String,
-    pub source: Option<String>,
-    pub region_name: Option<String>,
+    pub attitudes_count: Option<i64>,
+    #[serde(default)]
+    pub attitudes_status: i64,
+    #[serde(with = "datetime")]
+    pub created_at: DateTime<FixedOffset>,
+    pub comments_count: Option<i64>,
     #[serde(default, deserialize_with = "deserialize_deleted")]
     pub deleted: bool,
-    #[serde(default, deserialize_with = "deserialize_ids")]
-    pub pic_ids: Option<Vec<String>>,
-    pub pic_num: Option<i64>,
-    pub url_struct: Option<UrlStruct>,
+    pub edit_count: Option<i64>,
+    #[serde(default)]
+    pub favorited: bool,
+    pub geo: Option<Value>,
+    pub id: i64,
+    #[serde(default, rename = "isLongText")]
+    pub is_long_text: bool,
+    #[serde(rename = "longText")]
+    pub long_text: Option<LongText>,
+    pub mblogid: String,
     #[serde(default, deserialize_with = "deserialize_ids")]
     pub mix_media_ids: Option<Vec<String>>,
     pub mix_media_info: Option<MixMediaInfo>,
+    pub page_info: Option<PageInfo>,
+    #[serde(default, deserialize_with = "deserialize_ids")]
+    pub pic_ids: Option<Vec<String>>,
+    pub pic_infos: Option<HashMap<String, PicInfoItem>>,
+    pub pic_num: Option<i64>,
+    pub region_name: Option<String>,
+    pub reposts_count: Option<i64>,
+    pub repost_type: Option<i64>,
+    pub retweeted_status: Option<Box<Post>>,
+    pub source: Option<String>,
     pub text: String,
     #[serde(default)]
-    pub attitudes_status: i64,
-    #[serde(default)]
-    pub favorited: bool,
-    pub pic_infos: Option<HashMap<String, PicInfoItem>>,
-    pub reposts_count: Option<i64>,
-    pub comments_count: Option<i64>,
-    pub attitudes_count: Option<i64>,
-    pub repost_type: Option<i64>,
-    pub edit_count: Option<i64>,
-    #[serde(default, rename = "isLongText")]
-    pub is_long_text: bool,
-    pub geo: Option<Value>,
-    pub page_info: Option<PageInfo>,
-    #[serde(default)]
     pub unfavorited: bool,
-    #[serde(with = "datetime")]
-    pub created_at: DateTime<FixedOffset>,
-    pub retweeted_status: Option<Box<Post>>,
+    pub url_struct: Option<UrlStruct>,
     #[serde(default, deserialize_with = "deserialize_user")]
     pub user: Option<User>,
 }
@@ -96,6 +98,11 @@ mod datetime {
             Err(e) => Err(serde::de::Error::custom(e)),
         }
     }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct LongText {
+    pub content: String,
 }
 
 #[cfg(test)]
