@@ -4,7 +4,7 @@ use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use super::{mix_media_info::MixMediaInfo, url_struct::UrlStruct};
+use super::{mix_media_info::MixMediaInfo, page_info::PageInfo, url_struct::UrlStruct};
 use crate::User;
 use crate::models::pic_infos::PicInfoItem;
 
@@ -40,7 +40,7 @@ pub struct Post {
     #[serde(default, rename = "isLongText")]
     pub is_long_text: bool,
     pub geo: Option<Value>,
-    pub page_info: Option<Value>,
+    pub page_info: Option<PageInfo>,
     #[serde(default)]
     pub unfavorited: bool,
     #[serde(with = "datetime")]
