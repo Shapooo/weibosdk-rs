@@ -30,19 +30,19 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct User {
     #[serde(default)]
-    pub id: i64,
-    #[serde(default)]
-    pub screen_name: String,
-    #[serde(default)]
-    pub profile_image_url: String,
+    pub avatar_hd: String,
     #[serde(default)]
     pub avatar_large: String,
     #[serde(default)]
-    pub avatar_hd: String,
-    #[serde(default)]
     pub domain: String,
+    #[serde(default)]
+    pub following: bool,
     #[serde(default)]
     pub follow_me: bool,
     #[serde(default)]
-    pub following: bool,
+    pub id: i64,
+    #[serde(default)]
+    pub profile_image_url: String,
+    #[serde(default)]
+    pub screen_name: String,
 }
