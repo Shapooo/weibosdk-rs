@@ -193,7 +193,7 @@ mod local_tests {
             .set_statuses_show_response_from_file(&get_test_data_path("statuses_show.json"))
             .unwrap();
         let result = api.statuses_show(123).await.unwrap();
-        assert!(!result.long_text.unwrap().content.is_empty());
+        assert!(!result.long_text.unwrap().is_empty());
     }
 
     #[tokio::test]

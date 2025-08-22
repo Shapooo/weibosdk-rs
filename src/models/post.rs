@@ -25,8 +25,12 @@ pub struct Post {
     pub id: i64,
     #[serde(default, rename = "isLongText")]
     pub is_long_text: bool,
-    #[serde(rename = "longText")]
-    pub long_text: Option<LongText>,
+    #[serde(
+        default,
+        rename = "longText",
+        deserialize_with = "deserialize_long_text"
+    )]
+    pub long_text: Option<String>,
     pub mblogid: String,
     #[serde(default, deserialize_with = "deserialize_ids")]
     pub mix_media_ids: Option<Vec<String>>,
@@ -75,6 +79,19 @@ where
     Ok(ids.and_then(|ids| if ids.is_empty() { None } else { Some(ids) }))
 }
 
+pub fn deserialize_long_text<'de, D>(
+    deserializer: D,
+) -> std::result::Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    struct LongText {
+        pub content: String,
+    }
+    Ok(Some(LongText::deserialize(deserializer)?.content))
+}
+
 mod datetime {
     use std::borrow::Cow;
 
@@ -98,11 +115,6 @@ mod datetime {
             Err(e) => Err(serde::de::Error::custom(e)),
         }
     }
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct LongText {
-    pub content: String,
 }
 
 #[cfg(test)]

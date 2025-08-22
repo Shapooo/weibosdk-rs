@@ -102,7 +102,7 @@ mod real_tests {
             let client = client::Client::new().unwrap();
             let weibo_api = WeiboAPIImpl::from_session(client, session);
             let post = weibo_api.statuses_show(5179586393932632).await.unwrap();
-            assert!(!post.long_text.unwrap().content.is_empty());
+            assert!(!post.long_text.unwrap().is_empty());
         }
     }
 }
