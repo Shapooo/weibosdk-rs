@@ -40,10 +40,6 @@ pub struct User {
     #[serde(default)]
     pub avatar_hd: String,
     #[serde(default)]
-    pub verified: bool,
-    #[serde(default)]
-    pub verified_type: i64,
-    #[serde(default)]
     pub domain: String,
     #[serde(default)]
     pub follow_me: bool,

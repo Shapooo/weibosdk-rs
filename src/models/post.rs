@@ -20,9 +20,6 @@ pub struct Post {
     pub pic_ids: Option<Vec<String>>,
     pub pic_num: Option<i64>,
     pub url_struct: Option<UrlStruct>,
-    pub topic_struct: Option<Value>,
-    pub tag_struct: Option<Value>,
-    pub common_struct: Option<Value>,
     #[serde(default, deserialize_with = "deserialize_ids")]
     pub mix_media_ids: Option<Vec<String>>,
     pub mix_media_info: Option<MixMediaInfo>,
