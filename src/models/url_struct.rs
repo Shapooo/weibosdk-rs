@@ -65,7 +65,10 @@ impl<'de> Deserialize<'de> for UrlType {
             StrNum::Num(1) => Ok(Self::Picture),
             StrNum::Num(36) => Ok(Self::Location),
             StrNum::Num(39) => Ok(Self::Appendix),
-            StrNum::Num(_) => Err(serde::de::Error::custom(format!("unknown url_type number"))),
+            StrNum::Num(n) => {
+                log::warn!("unknown url_struct type number {n}");
+                Ok(Self::Link)
+            }
             StrNum::Str(c) => {
                 if c.is_empty() {
                     Ok(Self::Topic)
