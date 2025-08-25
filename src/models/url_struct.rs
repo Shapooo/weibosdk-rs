@@ -114,3 +114,37 @@ where
             .next(),
     )
 }
+
+#[cfg(test)]
+mod local_tests {
+    use std::{fs::read_to_string, path::Path};
+
+    use serde_json::{Value, from_str, from_value, to_value};
+
+    use crate::models::UrlStruct;
+
+    fn get_url_structs() -> Vec<UrlStruct> {
+        let json_str =
+            read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/favorites.json"))
+                .unwrap();
+        let mut value: Value = from_str(&json_str).unwrap();
+        let url_structs = value["favorites"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .filter_map(|item| item["status"].get_mut("url_struct"))
+            .map(|v| from_value(v.take()).unwrap())
+            .collect::<Vec<_>>();
+        url_structs
+    }
+
+    #[test]
+    fn url_struct_conversion() {
+        let url_structs = get_url_structs();
+        for url_struct in url_structs {
+            let value = to_value(url_struct.clone()).unwrap();
+            let new_url_struct = from_value(value).unwrap();
+            assert_eq!(url_struct, new_url_struct);
+        }
+    }
+}
