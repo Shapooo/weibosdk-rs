@@ -112,3 +112,83 @@ where
     let s = Option::<String>::deserialize(deserializer)?;
     Ok(s.and_then(|s| if s.is_empty() { None } else { Some(s) }))
 }
+
+#[cfg(test)]
+mod local_tests {
+    use super::*;
+    use std::{fs::read_to_string, path::Path};
+
+    use serde_json::{Value, from_str, from_value, to_value};
+
+    fn create_posts() -> Vec<Value> {
+        let res =
+            read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/favorites.json"))
+                .unwrap();
+        let mut value: Value = from_str(&res).unwrap();
+        value["favorites"]
+            .as_array_mut()
+            .unwrap()
+            .into_iter()
+            .map(|f| f["status"].take())
+            .collect::<Vec<_>>()
+    }
+
+    #[test]
+    fn test_huge_info_conversion() {
+        let posts = create_posts();
+        let mut count = 0;
+        for mut post in posts {
+            let mix_media_info = if let Some(v) = post["retweeted_status"].take().as_object_mut() {
+                v.remove("mix_media_info")
+            } else {
+                post.as_object_mut().unwrap().remove("mix_media_info")
+            };
+            let Some(mut mmi) = mix_media_info else {
+                continue;
+            };
+            if let Value::Array(mmi) = mmi["items"].take() {
+                for v in mmi
+                    .into_iter()
+                    .filter(|m| m["data"]["content1"].is_string())
+                    .map(|mut m| m["data"].take())
+                {
+                    count += 1;
+                    let huge_info = from_value::<HugeInfo>(v).unwrap();
+                    let v_huge_info = to_value(huge_info.clone()).unwrap();
+                    let n_huge_info = from_value::<HugeInfo>(v_huge_info).unwrap();
+                    assert_eq!(n_huge_info, huge_info);
+                }
+            }
+        }
+        assert!(count > 0);
+    }
+
+    #[test]
+    fn test_video_info_conversion() {
+        let posts = create_posts();
+        let mut count = 0;
+        for mut post in posts {
+            let mix_media_info = if let Some(v) = post["retweeted_status"].take().as_object_mut() {
+                v.remove("mix_media_info")
+            } else {
+                post.as_object_mut().unwrap().remove("mix_media_info")
+            };
+            let Some(mut mmi) = mix_media_info else {
+                continue;
+            };
+            if let Value::Array(mmi) = mmi["items"].take() {
+                for v in mmi
+                    .into_iter()
+                    .filter_map(|mut m| m["data"].as_object_mut().unwrap().remove("media_info"))
+                {
+                    count += 1;
+                    let media_info = from_value::<VideoInfo>(v).unwrap();
+                    let v_media_info = to_value(media_info.clone()).unwrap();
+                    let n_media_info = from_value::<VideoInfo>(v_media_info).unwrap();
+                    assert_eq!(n_media_info, media_info);
+                }
+            }
+        }
+        assert!(count > 0);
+    }
+}
