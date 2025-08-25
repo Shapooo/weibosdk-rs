@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::PicInfoDetail;
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct PicInfoItem {
     pub bmiddle: PicInfoDetail,
     pub large: PicInfoDetail,
@@ -21,7 +21,7 @@ pub struct PicInfoItem {
     pub video_hd: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct FocusPoint {
     pub height: f32,
     pub left: f32,
@@ -29,7 +29,7 @@ pub struct FocusPoint {
     pub width: f32,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum PicInfoType {
     #[serde(rename = "pic")]
     Pic,

@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use serde::{Deserialize, Deserializer, Serialize};
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct PicInfoDetail {
     #[serde(deserialize_with = "deserialize_str_num")]
     pub height: i32,
@@ -11,7 +11,7 @@ pub struct PicInfoDetail {
     pub url: String,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct HugeInfo {
     pub author_id: String,
     pub content1: String,
@@ -31,7 +31,7 @@ pub struct HugeInfo {
     pub warn: String,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct VideoInfo {
     pub author_mid: Option<String>,
     pub author_name: Option<String>,
@@ -74,14 +74,14 @@ pub struct VideoInfo {
     pub video_publish_time: Option<i32>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct PicInfoItemSimple {
     pub pic_big: PicInfoDetail,
     pub pic_middle: PicInfoDetail,
     pub pic_small: PicInfoDetail,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum Orientation {
     #[serde(rename = "vertical")]
     Vertical,

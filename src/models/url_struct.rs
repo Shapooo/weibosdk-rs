@@ -10,7 +10,22 @@ use super::PicInfoDetail;
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct UrlStruct(pub Vec<UrlStructItem>);
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+impl PartialEq for UrlStruct {
+    fn eq(&self, other: &Self) -> bool {
+        if self.0.len() != other.0.len() {
+            return false;
+        }
+
+        for (l, r) in self.0.iter().zip(other.0.iter()) {
+            if l != r {
+                return false;
+            }
+        }
+        true
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct UrlStructItem {
     pub long_url: Option<String>,
     pub object_type: Option<String>,
@@ -27,7 +42,7 @@ pub struct UrlStructItem {
     pub vip_gif: Option<Value>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct PicInfosForStatus {
     pub bmiddle: PicInfoDetail,
     pub large: PicInfoDetail,
@@ -35,7 +50,7 @@ pub struct PicInfosForStatus {
     pub woriginal: PicInfoDetail,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum UrlType {
     #[serde(rename = "link")]
     Link,

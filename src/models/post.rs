@@ -8,7 +8,7 @@ use super::{mix_media_info::MixMediaInfo, page_info::PageInfo, url_struct::UrlSt
 use crate::User;
 use crate::models::pic_infos::PicInfoItem;
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Post {
     pub attitudes_count: Option<i64>,
     #[serde(default)]

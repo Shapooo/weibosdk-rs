@@ -8,7 +8,7 @@ use crate::models::PicInfoDetail;
 
 use super::common::{VideoInfo, deserialize_nonable_str};
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(from = "PageInfoInternal")]
 pub struct PageInfo {
     pub author_id: Option<i64>,
@@ -34,7 +34,7 @@ pub struct PageInfo {
     pub user: Option<Value>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct PagePicInfo {
     pub pic_big: PicInfoDetail,
 }
