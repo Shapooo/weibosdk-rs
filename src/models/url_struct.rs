@@ -101,7 +101,15 @@ fn deserialize_pic_ids<'de, D>(deserializer: D) -> Result<Option<String>, D::Err
 where
     D: Deserializer<'de>,
 {
-    Ok(Vec::<String>::deserialize(deserializer)?.into_iter().next())
+    Ok(
+        Option::<Vec<String>>::deserialize(deserializer)?.and_then(|v| {
+            if v.is_empty() {
+                None
+            } else {
+                v.into_iter().next()
+            }
+        }),
+    )
 }
 
 fn deserialize_pic_infos<'de, D>(deserializer: D) -> Result<Option<PicInfosForStatus>, D::Error>
@@ -109,9 +117,13 @@ where
     D: Deserializer<'de>,
 {
     Ok(
-        HashMap::<String, PicInfosForStatus>::deserialize(deserializer)?
-            .into_values()
-            .next(),
+        Option::<HashMap<String, PicInfosForStatus>>::deserialize(deserializer)?.and_then(|m| {
+            if m.is_empty() {
+                None
+            } else {
+                m.into_values().next()
+            }
+        }),
     )
 }
 
