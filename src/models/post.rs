@@ -66,8 +66,18 @@ fn deserialize_deleted<'de, D>(deserializer: D) -> std::result::Result<bool, D::
 where
     D: serde::Deserializer<'de>,
 {
-    let str = String::deserialize(deserializer)?;
-    Ok(str == "1")
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum StrBool<'a> {
+        B(bool),
+        S(Cow<'a, str>),
+    }
+
+    let res = StrBool::deserialize(deserializer)?;
+    match res {
+        StrBool::S(c) => Ok(c == "1"),
+        StrBool::B(b) => Ok(b),
+    }
 }
 
 pub fn deserialize_ids<'de, D>(
