@@ -87,6 +87,16 @@ impl<'de> Deserialize<'de> for UrlType {
             StrNum::Str(c) => {
                 if c.is_empty() {
                     Ok(Self::Topic)
+                } else if c == "link" {
+                    Ok(Self::Link)
+                } else if c == "pic" {
+                    Ok(Self::Picture)
+                } else if c == "loc" {
+                    Ok(Self::Location)
+                } else if c == "appendix" {
+                    Ok(Self::Appendix)
+                } else if c == "topic" {
+                    Ok(Self::Topic)
                 } else {
                     Err(serde::de::Error::custom(format!(
                         "unknown url_type str: {c}"
