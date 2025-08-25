@@ -109,6 +109,6 @@ pub fn deserialize_nonable_str<'de, D>(deserializer: D) -> Result<Option<String>
 where
     D: Deserializer<'de>,
 {
-    let s = String::deserialize(deserializer)?;
-    Ok((!s.is_empty()).then_some(s))
+    let s = Option::<String>::deserialize(deserializer)?;
+    Ok(s.and_then(|s| if s.is_empty() { None } else { Some(s) }))
 }
