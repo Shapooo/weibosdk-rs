@@ -13,4 +13,4 @@ pub use common::{HugeInfo, Orientation, PicInfoDetail, PicInfoItemSimple, VideoI
 pub use err_response::ErrResponse;
 pub use mix_media_info::{MixMediaInfo, MixMediaInfoItem};
 pub use pic_infos::{FocusPoint, PicInfoItem, PicInfoType};
-pub use url_struct::{PicInfosForStatus, UrlStruct, UrlStructItem};
+pub use url_struct::{PicInfosForStatusItem, UrlStruct, UrlStructItem};

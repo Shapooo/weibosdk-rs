@@ -38,12 +38,12 @@ pub struct UrlStructItem {
     #[serde(default, deserialize_with = "deserialize_pic_ids")]
     pub pic_ids: Option<String>,
     #[serde(default, deserialize_with = "deserialize_pic_infos")]
-    pub pic_infos: Option<PicInfosForStatus>,
+    pub pic_infos: Option<PicInfosForStatusItem>,
     pub vip_gif: Option<Value>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct PicInfosForStatus {
+pub struct PicInfosForStatusItem {
     pub bmiddle: PicInfoDetail,
     pub large: PicInfoDetail,
     pub thumbnail: PicInfoDetail,
@@ -111,30 +111,46 @@ fn deserialize_pic_ids<'de, D>(deserializer: D) -> Result<Option<String>, D::Err
 where
     D: Deserializer<'de>,
 {
-    Ok(
-        Option::<Vec<String>>::deserialize(deserializer)?.and_then(|v| {
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum StrOrVec {
+        S(String),
+        V(Vec<String>),
+    }
+    let res = Option::<StrOrVec>::deserialize(deserializer)?.and_then(|sv| match sv {
+        StrOrVec::V(v) => {
             if v.is_empty() {
                 None
             } else {
                 v.into_iter().next()
             }
-        }),
-    )
+        }
+        StrOrVec::S(s) => Some(s),
+    });
+    Ok(res)
 }
 
-fn deserialize_pic_infos<'de, D>(deserializer: D) -> Result<Option<PicInfosForStatus>, D::Error>
+fn deserialize_pic_infos<'de, D>(deserializer: D) -> Result<Option<PicInfosForStatusItem>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    Ok(
-        Option::<HashMap<String, PicInfosForStatus>>::deserialize(deserializer)?.and_then(|m| {
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum MapOrItem {
+        M(HashMap<String, PicInfosForStatusItem>),
+        I(PicInfosForStatusItem),
+    }
+    let res = Option::<MapOrItem>::deserialize(deserializer)?.and_then(|mi| match mi {
+        MapOrItem::I(i) => Some(i),
+        MapOrItem::M(m) => {
             if m.is_empty() {
                 None
             } else {
                 m.into_values().next()
             }
-        }),
-    )
+        }
+    });
+    Ok(res)
 }
 
 #[cfg(test)]
