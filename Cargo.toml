@@ -19,7 +19,7 @@ url = "2"
 
 [dev-dependencies]
 simple_logger = "5"
-tempfile = "3.20.0"
+tempfile = "3"
 wiremock = "0.6"
 
 [features]
