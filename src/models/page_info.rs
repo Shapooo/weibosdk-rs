@@ -147,9 +147,10 @@ where
         Str(Cow<'a, str>),
         Num(i64),
     }
-    match Either::deserialize(deserializer)? {
-        Either::Str(s) => s.parse().map_err(serde::de::Error::custom).map(Some),
-        Either::Num(n) => Ok(Some(n)),
+    match Option::<Either>::deserialize(deserializer)? {
+        Some(Either::Str(s)) => s.parse().map_err(serde::de::Error::custom).map(Some),
+        Some(Either::Num(n)) => Ok(Some(n)),
+        None => Ok(None),
     }
 }
 
@@ -169,19 +170,18 @@ mod local_tests {
     fn page_info_conversion() {
         let res = create_response_str();
         let mut value: Value = from_str(&res).unwrap();
-        let pis = value["favorites"]
+        let posts = value["favorites"]
             .take()
             .as_array_mut()
             .unwrap()
             .iter_mut()
-            .filter_map(|p| {
-                p["status"]
-                    .as_object_mut()
-                    .take()
-                    .and_then(|m| m.remove("page_info"))
-            })
+            .map(|p| p["status"].take())
             .collect::<Vec<_>>();
-        for pi in pis {
+        for mut post in posts {
+            let Some(pi) = post.as_object_mut().and_then(|p| p.remove("page_info")) else {
+                continue;
+            };
+            println!("{}", post["id"]);
             let pi = from_value::<PageInfo>(pi).unwrap();
             let vpi = to_value(pi.clone()).unwrap();
             let n_pi = from_value::<PageInfo>(vpi).unwrap();
