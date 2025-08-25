@@ -89,7 +89,19 @@ where
     struct LongText {
         pub content: String,
     }
-    Ok(Some(LongText::deserialize(deserializer)?.content))
+
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum LTorS<'a> {
+        LT(LongText),
+        S(Cow<'a, str>),
+    }
+
+    let res = Option::<LTorS>::deserialize(deserializer)?.map(|lts| match lts {
+        LTorS::S(s) => s.to_string(),
+        LTorS::LT(lt) => lt.content,
+    });
+    Ok(res)
 }
 
 mod datetime {
