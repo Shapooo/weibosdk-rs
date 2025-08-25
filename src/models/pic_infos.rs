@@ -38,3 +38,53 @@ pub enum PicInfoType {
     #[serde(rename = "livephoto")]
     Livephoto,
 }
+
+#[cfg(test)]
+mod local_tests {
+    use std::{fs::read_to_string, path::Path};
+
+    use serde_json::{Value, from_str, from_value, to_value};
+
+    use super::PicInfoItem;
+
+    fn get_pic_infos() -> Vec<PicInfoItem> {
+        let json_str =
+            read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/favorites.json"))
+                .unwrap();
+        let mut value: Value = from_str(&json_str).unwrap();
+        let pic_infos = value["favorites"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .filter_map(|item| {
+                if let Some(ret) = item["status"]["retweeted_status"].as_object_mut() {
+                    ret.remove("pic_infos")
+                } else {
+                    item["status"].as_object_mut().unwrap().remove("pic_infos")
+                }
+            })
+            .collect::<Vec<_>>();
+        pic_infos
+            .into_iter()
+            .flat_map(|v| {
+                let res = if let Value::Object(v) = v {
+                    Some(v.into_values())
+                } else {
+                    None
+                };
+                res.unwrap()
+            })
+            .map(|p| from_value::<PicInfoItem>(p).unwrap())
+            .collect()
+    }
+
+    #[test]
+    fn pic_info_item_conversion() {
+        let pic_infos = get_pic_infos();
+        for pic_info in pic_infos {
+            let value = to_value(pic_info.clone()).unwrap();
+            let new_pic_info = from_value(value).unwrap();
+            assert_eq!(pic_info, new_pic_info);
+        }
+    }
+}
