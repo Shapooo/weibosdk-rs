@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 use chrono::{DateTime, FixedOffset};
@@ -122,10 +123,9 @@ mod datetime {
         D: Deserializer<'de>,
     {
         let created_at = Cow::<'_, str>::deserialize(deserializer)?;
-        match DateTime::parse_from_str(&created_at, "%a %b %d %T %z %Y") {
-            Ok(dt) => Ok(dt),
-            Err(e) => Err(serde::de::Error::custom(e)),
-        }
+        DateTime::parse_from_str(&created_at, "%a %b %d %T %z %Y")
+            .or_else(|_| DateTime::parse_from_rfc3339(&created_at))
+            .map_err(serde::de::Error::custom)
     }
 }
 
