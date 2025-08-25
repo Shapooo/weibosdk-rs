@@ -16,7 +16,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Deserialize)]
-struct FavoritesPost {
+pub(crate) struct FavoritesPost {
     pub status: Post,
 }
 
@@ -28,11 +28,11 @@ enum FavoritesResponse {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-struct FavoritesSucc {
-    favorites: Vec<FavoritesPost>,
+pub(crate) struct FavoritesSucc {
+    pub favorites: Vec<FavoritesPost>,
     #[serde(default)]
     #[allow(unused)]
-    total_number: i32,
+    pub total_number: i32,
 }
 
 impl TryFrom<FavoritesResponse> for Vec<Post> {

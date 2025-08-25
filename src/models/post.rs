@@ -141,23 +141,44 @@ mod datetime {
 
 #[cfg(test)]
 mod local_tests {
-    use serde_json::from_value;
+    use serde_json::from_str;
 
     use super::*;
+    use std::fs::read_to_string;
     use std::path::Path;
+
+    fn create_reponse_str() -> String {
+        read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/favorites.json"))
+            .unwrap()
+    }
 
     #[test]
     fn test_deserialize_post() {
-        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-        let testcase_path = manifest_dir.join("tests/data/favorites.json");
-        let response_body = std::fs::read_to_string(testcase_path).unwrap();
-        let mut value = serde_json::from_str::<Value>(&response_body).unwrap();
-        value = value["favorites"].take();
-        if let Value::Array(v) = value.take() {
-            let _ = v
-                .into_iter()
-                .map(|mut post| from_value::<Post>(post["status"].take()))
-                .collect::<Vec<_>>();
+        let response = create_reponse_str();
+        let favorites = from_str::<crate::favorites::FavoritesSucc>(&response).unwrap();
+
+        assert!(!favorites.favorites.is_empty());
+    }
+
+    #[test]
+    fn test_post_serde_roundtrip() {
+        let json_data = create_reponse_str();
+
+        let parsed_favorites: crate::favorites::FavoritesSucc =
+            serde_json::from_str(&json_data).expect("Failed to parse favorites.json");
+        let posts = parsed_favorites
+            .favorites
+            .into_iter()
+            .map(|f| f.status)
+            .collect::<Vec<_>>();
+
+        for post in posts {
+            let value_from_struct =
+                serde_json::to_value(&post).expect("Failed to serialize Post to Value");
+
+            let post_roundtrip: Post = serde_json::from_value(value_from_struct)
+                .expect("Failed to deserialize Post from roundtrip Value");
+            assert_eq!(post, post_roundtrip);
         }
     }
 }
