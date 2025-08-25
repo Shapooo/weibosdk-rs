@@ -152,3 +152,40 @@ where
         Either::Num(n) => Ok(Some(n)),
     }
 }
+
+#[cfg(test)]
+mod local_tests {
+    use super::*;
+    use serde_json::{Value, from_str, from_value, to_value};
+    use std::fs::read_to_string;
+    use std::path::Path;
+
+    fn create_response_str() -> String {
+        read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/favorites.json"))
+            .unwrap()
+    }
+
+    #[test]
+    fn page_info_conversion() {
+        let res = create_response_str();
+        let mut value: Value = from_str(&res).unwrap();
+        let pis = value["favorites"]
+            .take()
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .filter_map(|p| {
+                p["status"]
+                    .as_object_mut()
+                    .take()
+                    .and_then(|m| m.remove("page_info"))
+            })
+            .collect::<Vec<_>>();
+        for pi in pis {
+            let pi = from_value::<PageInfo>(pi).unwrap();
+            let vpi = to_value(pi.clone()).unwrap();
+            let n_pi = from_value::<PageInfo>(vpi).unwrap();
+            assert_eq!(n_pi, pi);
+        }
+    }
+}
