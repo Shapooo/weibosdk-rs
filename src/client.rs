@@ -7,7 +7,8 @@ use reqwest::{
     RequestBuilder,
     header::{self, HeaderMap, HeaderValue},
 };
-use reqwest_cookie_store::{CookieStore, CookieStoreMutex};
+pub use reqwest_cookie_store::CookieStore;
+use reqwest_cookie_store::CookieStoreMutex;
 use serde::{Serialize, de::DeserializeOwned};
 
 use crate::error::{Error, Result};
