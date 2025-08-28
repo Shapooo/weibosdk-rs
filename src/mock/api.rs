@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 use crate::{
     WeiboAPI,
@@ -27,7 +28,7 @@ impl MockAPI {
         }
     }
 
-    pub fn from_session(client: MockClient, session: Session) -> Self {
+    pub fn from_session(client: MockClient, session: Arc<Mutex<Session>>) -> Self {
         Self {
             client: WeiboAPIImpl::from_session(client, session),
         }
@@ -45,7 +46,7 @@ impl MockAPI {
         self.client.login(sms_code).await
     }
 
-    pub async fn login_with_session(&mut self, session: Session) -> Result<()> {
+    pub async fn login_with_session(&mut self, session: Arc<Mutex<Session>>) -> Result<()> {
         self.client.login_with_session(session).await
     }
 }
@@ -136,6 +137,7 @@ mod local_tests {
             screen_name: "screen_name".to_string(),
             cookie_store: Default::default(),
         };
+        let session = Arc::new(Mutex::new(session));
 
         mock_client
             .set_login_response_from_file(&get_test_data_path("login.json"))
@@ -152,6 +154,7 @@ mod local_tests {
             screen_name: "screen_name".to_string(),
             cookie_store: Default::default(),
         };
+        let session = Arc::new(Mutex::new(session));
         let api = MockAPI::from_session(mock_client.clone(), session);
         (mock_client, api)
     }

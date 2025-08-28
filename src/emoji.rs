@@ -140,6 +140,7 @@ mod local_tests {
     use super::*;
     use crate::{mock::MockClient, session::Session};
     use std::path::Path;
+    use std::sync::{Arc, Mutex};
 
     #[tokio::test]
     async fn test_emoji_update() {
@@ -150,6 +151,7 @@ mod local_tests {
             screen_name: "test_screen_name".to_string(),
             cookie_store: Default::default(),
         };
+        let session = Arc::new(Mutex::new(session));
         let weibo_api = WeiboAPIImpl::from_session(mock_client.clone(), session);
 
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -175,11 +177,12 @@ mod real_tests {
     use super::*;
     use crate::{client, session::Session, weibo_api::WeiboAPIImpl};
     use std::path::Path;
+    use std::sync::{Arc, Mutex};
 
     #[tokio::test]
     async fn test_real_web_emoticon() {
         let session_file = Path::new(env!("CARGO_MANIFEST_DIR")).join("session.json");
-        let session = Session::load(session_file).unwrap();
+        let session = Arc::new(Mutex::new(Session::load(session_file).unwrap()));
         let client = client::Client::new().unwrap();
         let mut weibo_api = WeiboAPIImpl::new(client, Default::default());
         weibo_api.login_with_session(session).await.unwrap();
@@ -190,7 +193,7 @@ mod real_tests {
     #[tokio::test]
     async fn test_real_mobile_emoji() {
         let session_file = Path::new(env!("CARGO_MANIFEST_DIR")).join("session.json");
-        let session = Session::load(session_file).unwrap();
+        let session = Arc::new(Mutex::new(Session::load(session_file).unwrap()));
         let client = client::Client::new().unwrap();
         let mut weibo_api = WeiboAPIImpl::new(client, Default::default());
         weibo_api.login_with_session(session).await.unwrap();
@@ -201,7 +204,7 @@ mod real_tests {
     #[tokio::test]
     async fn test_real_emoji_update() {
         let session_file = Path::new(env!("CARGO_MANIFEST_DIR")).join("session.json");
-        let session = Session::load(session_file).unwrap();
+        let session = Arc::new(Mutex::new(Session::load(session_file).unwrap()));
         let client = client::Client::new().unwrap();
         let mut weibo_api = WeiboAPIImpl::new(client, Default::default());
         weibo_api.login_with_session(session).await.unwrap();

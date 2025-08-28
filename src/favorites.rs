@@ -71,6 +71,7 @@ impl<C: HttpClient> FavoritesAPI for WeiboAPIImpl<C> {
     async fn favorites(&self, page: u32) -> Result<Vec<Post>> {
         info!("getting favorites, page: {page}");
         let session = self.session()?;
+        let session = session.lock().unwrap().clone();
         let s = utils::generate_s(&session.uid, FROM);
         let mut params = utils::build_common_params();
         params["gsid"] = session.gsid.clone().into();
@@ -89,6 +90,7 @@ impl<C: HttpClient> FavoritesAPI for WeiboAPIImpl<C> {
     async fn favorites_destroy(&self, id: i64) -> Result<()> {
         info!("destroying favorite, id: {id}");
         let session = self.session()?;
+        let session = session.lock().unwrap().clone();
         let s = utils::generate_s(&session.uid, FROM);
         let mut params = utils::build_common_params();
         params["gsid"] = session.gsid.clone().into();
@@ -106,6 +108,7 @@ impl<C: HttpClient> FavoritesAPI for WeiboAPIImpl<C> {
 #[cfg(test)]
 mod local_tests {
     use std::path::Path;
+    use std::sync::{Arc, Mutex};
 
     use super::*;
     use crate::{
@@ -122,6 +125,7 @@ mod local_tests {
             screen_name: "test_screen_name".to_string(),
             cookie_store: Default::default(),
         };
+        let session = Arc::new(Mutex::new(session));
         let weibo_api = WeiboAPIImpl::from_session(mock_client.clone(), session);
 
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -143,6 +147,7 @@ mod local_tests {
             screen_name: "test_screen_name".to_string(),
             cookie_store: Default::default(),
         };
+        let session = Arc::new(Mutex::new(session));
         let weibo_api = WeiboAPIImpl::from_session(mock_client.clone(), session);
         let id = 12345;
 
@@ -157,11 +162,13 @@ mod local_tests {
 mod real_tests {
     use super::*;
     use crate::{client, session::Session, weibo_api::WeiboAPIImpl};
+    use std::sync::{Arc, Mutex};
 
     #[tokio::test]
     async fn test_real_favorites() {
         let session_file = "session.json";
         if let Ok(session) = Session::load(session_file) {
+            let session = Arc::new(Mutex::new(session));
             let client = client::Client::new().unwrap();
             let weibo_api = WeiboAPIImpl::from_session(client, session);
             let _ = weibo_api.favorites(1).await.unwrap();

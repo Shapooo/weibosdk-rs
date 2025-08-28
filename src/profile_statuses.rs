@@ -54,6 +54,7 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
             containerid.clone()
         );
         let session = self.session()?;
+        let session = session.lock().unwrap().clone();
         let s = utils::generate_s(&session.uid, FROM);
         let mut params = utils::build_common_params();
         params["gsid"] = session.gsid.clone().into();
@@ -125,6 +126,7 @@ impl<C: HttpClient> ProfileStatusesAPI for WeiboAPIImpl<C> {
 #[cfg(test)]
 mod local_tests {
     use std::path::Path;
+    use std::sync::{Arc, Mutex};
 
     use super::*;
     use crate::{
@@ -141,6 +143,7 @@ mod local_tests {
             screen_name: "test_screen_name".to_string(),
             cookie_store: Default::default(),
         };
+        let session = Arc::new(Mutex::new(session));
         let weibo_api = WeiboAPIImpl::from_session(mock_client.clone(), session);
 
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -158,13 +161,14 @@ mod local_tests {
 mod real_tests {
     use super::*;
     use crate::{client, session::Session, weibo_api::WeiboAPIImpl};
+    use std::sync::{Arc, Mutex};
 
     #[tokio::test]
     async fn test_real_profile_statuses() {
         let session_file = "session.json";
         if let Ok(session) = Session::load(session_file) {
             let client = client::Client::new().unwrap();
-            let weibo_api = WeiboAPIImpl::from_session(client, session);
+            let weibo_api = WeiboAPIImpl::from_session(client, Arc::new(Mutex::new(session)));
             let posts = weibo_api.profile_statuses(1401527553, 1).await.unwrap();
             assert!(!posts.is_empty());
         }
