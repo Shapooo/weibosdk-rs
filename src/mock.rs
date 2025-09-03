@@ -6,9 +6,9 @@ use std::fs;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
-use crate::client::{HttpClient, HttpResponse};
 use crate::constants::urls::*;
 use crate::error::{Error, Result};
+use crate::http_client::{HttpClient, HttpResponse};
 
 #[derive(Debug, Clone)]
 pub struct MockHttpResponse {

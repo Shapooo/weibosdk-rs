@@ -2,15 +2,15 @@ use std::sync::{Arc, Mutex};
 
 use simple_logger;
 use std::io::{self, Write};
-use weibosdk_rs::{FavoritesAPI, WeiboAPIImpl, session::Session};
+use weibosdk_rs::{ApiClient, session::Session};
 
 #[tokio::main]
 async fn main() {
     simple_logger::init_with_level(log::Level::Debug).unwrap();
 
     let session_file = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("session.json");
-    let client = weibosdk_rs::client::Client::new().unwrap();
-    let mut weibo_api = WeiboAPIImpl::new(client, Default::default());
+    let client = weibosdk_rs::http_client::Client::new().unwrap();
+    let mut weibo_api = ApiClient::new(client, Default::default());
 
     if let Ok(session) = Session::load(&session_file) {
         println!("Loaded session from {session_file:?}");

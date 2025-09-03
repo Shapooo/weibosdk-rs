@@ -6,19 +6,26 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 
 use crate::{
-    client::{HttpClient, HttpResponse},
     config::Conifg,
     constants::{
         params::*,
         urls::{URL_LOGIN, URL_SEND_CODE},
     },
     error::{Error, Result},
-    models::err_response::ErrResponse,
+    http_client::{HttpClient, HttpResponse},
     session::Session,
 };
 
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct ErrResponse {
+    pub errmsg: String,
+    pub errno: i32,
+    pub errtype: String,
+    pub isblock: bool,
+}
+
 #[derive(Debug, Clone)]
-pub struct WeiboAPIImpl<C: HttpClient> {
+pub struct ApiClient<C: HttpClient> {
     pub client: C,
     pub config: Conifg,
     login_state: LoginState,
@@ -50,10 +57,10 @@ impl LoginState {
     }
 }
 
-impl<C: HttpClient> WeiboAPIImpl<C> {
+impl<C: HttpClient> ApiClient<C> {
     pub fn new(client: C, config: Conifg) -> Self {
-        info!("WeiboAPIImpl created");
-        WeiboAPIImpl {
+        info!("WeiboClient created");
+        ApiClient {
             client,
             config,
             login_state: Default::default(),
@@ -67,13 +74,13 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
     #[cfg(any(feature = "test-mocks", test))]
     pub fn from_session(mut client: C, session: Arc<Mutex<Session>>) -> Self {
         info!(
-            "WeiboAPIImpl created from session for user {}",
+            "WeiboClient created from session for user {}",
             session.lock().unwrap().screen_name
         );
         client
             .set_cookie(session.lock().unwrap().cookie_store.clone())
             .unwrap();
-        WeiboAPIImpl {
+        ApiClient {
             client,
             config: Default::default(),
             login_state: LoginState::LoggedIn { session },
@@ -184,8 +191,6 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
     }
 }
 
-impl<C: HttpClient> crate::WeiboAPI for WeiboAPIImpl<C> {}
-
 #[derive(Debug, Clone, Deserialize)]
 #[serde(untagged)]
 enum SendCodeResponse {
@@ -267,7 +272,7 @@ mod local_tests {
             MockHttpResponse::new(200, &send_code_response_json.to_string()),
         );
 
-        let mut weibo_api = WeiboAPIImpl::new(mock_client.clone(), Default::default());
+        let mut weibo_api = ApiClient::new(mock_client.clone(), Default::default());
         weibo_api.get_sms_code(phone_number.clone()).await.unwrap();
 
         assert!(
@@ -288,7 +293,7 @@ mod local_tests {
             MockHttpResponse::new(200, &login_response_json.to_string()),
         );
 
-        let mut weibo_api = WeiboAPIImpl {
+        let mut weibo_api = ApiClient {
             config: Default::default(),
             client: mock_client.clone(),
             login_state: LoginState::WaitingForCode {
@@ -331,7 +336,7 @@ mod local_tests {
             MockHttpResponse::new(200, &login_response_json.to_string()),
         );
 
-        let mut weibo_api = WeiboAPIImpl::new(mock_client.clone(), Default::default());
+        let mut weibo_api = ApiClient::new(mock_client.clone(), Default::default());
         weibo_api.login_with_session(old_session).await.unwrap();
 
         assert!(matches!(weibo_api.login_state, LoginState::LoggedIn { .. }));

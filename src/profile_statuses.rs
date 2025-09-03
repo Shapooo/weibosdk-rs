@@ -1,57 +1,43 @@
-#![allow(async_fn_in_trait)]
-use log::{debug, error, info};
-use serde::Deserialize;
+use log::info;
 
 use crate::{
-    Post,
-    client::{HttpClient, HttpResponse},
+    api_client::ApiClient,
     constants::{params::*, urls::*},
-    error::{Error, Result},
-    models::err_response::ErrResponse,
+    error::Result,
+    http_client::HttpClient,
     utils,
-    weibo_api::WeiboAPIImpl,
 };
 
-#[derive(Debug, Clone, Deserialize)]
-struct Card {
-    #[allow(unused)]
-    card_type: i32,
-    mblog: Option<Post>,
+#[derive(Debug, Clone, PartialEq)]
+pub enum ContainerType {
+    Normal,
+    Original,
+    Picture,
+    Video,
+    Article,
 }
 
-#[derive(Debug, Clone, Deserialize)]
-#[serde(untagged)]
-enum ProfileStatusesResponse {
-    Succ(ProfileStatusesSucc),
-    Fail(ErrResponse),
+impl ContainerType {
+    pub fn to_container_id(&self, uid: i64) -> String {
+        match self {
+            Self::Normal => format!("230413{uid}_-_WEIBO_SECOND_PROFILE_WEIBO"),
+            Self::Original => format!("230413{uid}_-_WEIBO_SECOND_PROFILE_WEIBO_ORI"),
+            Self::Picture => format!("230413{uid}_-_WEIBO_SECOND_PROFILE_WEIBO_PIC"),
+            Self::Video => format!("230413{uid}_-_WEIBO_SECOND_PROFILE_WEIBO_VIDEO"),
+            Self::Article => format!("230413{uid}_-_WEIBO_SECOND_PROFILE_WEIBO_ARTICAL"),
+        }
+    }
 }
 
-#[derive(Debug, Clone, Deserialize)]
-struct ProfileStatusesSucc {
-    cards: Vec<Card>,
-}
-
-pub trait ProfileStatusesAPI {
-    async fn profile_statuses(&self, uid: i64, page: u32) -> Result<Vec<Post>>;
-    async fn profile_statuses_original(&self, uid: i64, page: u32) -> Result<Vec<Post>>;
-    async fn profile_statuses_picture(&self, uid: i64, page: u32) -> Result<Vec<Post>>;
-    async fn profile_statuses_video(&self, uid: i64, page: u32) -> Result<Vec<Post>>;
-    async fn profile_statuses_article(&self, uid: i64, page: u32) -> Result<Vec<Post>>;
-}
-
-impl<C: HttpClient> WeiboAPIImpl<C> {
-    async fn get_profile_statuses(
+impl<C: HttpClient> ApiClient<C> {
+    pub async fn profile_statuses(
         &self,
         uid: i64,
         page: u32,
-        containerid: String,
-        filter_likes: bool,
-    ) -> Result<Vec<Post>> {
+        container_type: ContainerType,
+    ) -> Result<C::Response> {
         info!(
-            "getting profile statuses, uid: {}, page: {}, containerid: {}",
-            uid,
-            page,
-            containerid.clone()
+            "getting profile statuses, uid: {uid}, page: {page}, containerid: {container_type:?}"
         );
         let session = self.session()?;
         let session = session.lock().unwrap().clone();
@@ -63,114 +49,29 @@ impl<C: HttpClient> WeiboAPIImpl<C> {
         params["page"] = page.into();
         params["count"] = self.config.status_count.into();
         params["mix_media_enable"] = MIX_MEDIA_ENABLE.into();
-        params["containerid"] = containerid.into();
-        let response = self
-            .client
+        params["containerid"] = container_type.to_container_id(uid).into();
+        self.client
             .get(URL_PROFILE_STATUSES, &params, self.config.retry_times)
-            .await?;
-        let response = response.json::<ProfileStatusesResponse>().await?;
-        match response {
-            ProfileStatusesResponse::Succ(ProfileStatusesSucc { cards }) => {
-                let posts_iterator = cards.into_iter().filter_map(|card| card.mblog);
-
-                let posts = if filter_likes {
-                    posts_iterator
-                        .filter(|post| post.user.as_ref().is_none_or(|u| u.id == uid))
-                        .collect::<Vec<Post>>()
-                } else {
-                    posts_iterator.collect::<Vec<Post>>()
-                };
-                debug!("got {} posts", posts.len());
-                Ok(posts)
-            }
-            ProfileStatusesResponse::Fail(err) => {
-                error!("failed to get profile statuses: {err:?}");
-                Err(Error::ApiError(err))
-            }
-        }
-    }
-}
-
-impl<C: HttpClient> ProfileStatusesAPI for WeiboAPIImpl<C> {
-    async fn profile_statuses(&self, uid: i64, page: u32) -> Result<Vec<Post>> {
-        let containerid = format!("230413{uid}_-_WEIBO_SECOND_PROFILE_WEIBO");
-        self.get_profile_statuses(uid, page, containerid, true)
             .await
-    }
-
-    async fn profile_statuses_original(&self, uid: i64, page: u32) -> Result<Vec<Post>> {
-        let containerid = format!("230413{uid}_-_WEIBO_SECOND_PROFILE_WEIBO_ORI");
-        self.get_profile_statuses(uid, page, containerid, false)
-            .await
-    }
-
-    async fn profile_statuses_picture(&self, uid: i64, page: u32) -> Result<Vec<Post>> {
-        let containerid = format!("230413{uid}_-_WEIBO_SECOND_PROFILE_WEIBO_PIC");
-        self.get_profile_statuses(uid, page, containerid, false)
-            .await
-    }
-
-    async fn profile_statuses_video(&self, uid: i64, page: u32) -> Result<Vec<Post>> {
-        let containerid = format!("230413{uid}_-_WEIBO_SECOND_PROFILE_WEIBO_VIDEO");
-        self.get_profile_statuses(uid, page, containerid, false)
-            .await
-    }
-
-    async fn profile_statuses_article(&self, uid: i64, page: u32) -> Result<Vec<Post>> {
-        let containerid = format!("230413{uid}_-_WEIBO_SECOND_PROFILE_WEIBO_ARTICAL");
-        self.get_profile_statuses(uid, page, containerid, false)
-            .await
-    }
-}
-
-#[cfg(test)]
-mod local_tests {
-    use std::path::Path;
-    use std::sync::{Arc, Mutex};
-
-    use super::*;
-    use crate::{
-        mock::{MockClient, MockHttpResponse},
-        session::Session,
-    };
-
-    #[tokio::test]
-    async fn test_profile_statuses_ori() {
-        let mock_client = MockClient::new();
-        let session = Session {
-            gsid: "test_gsid".to_string(),
-            uid: "test_uid".to_string(),
-            screen_name: "test_screen_name".to_string(),
-            cookie_store: Default::default(),
-        };
-        let session = Arc::new(Mutex::new(session));
-        let weibo_api = WeiboAPIImpl::from_session(mock_client.clone(), session);
-
-        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-        let testcase_path = manifest_dir.join("tests/data/profile_statuses.json");
-        let mock_response_body = std::fs::read_to_string(testcase_path).unwrap();
-
-        let mock_response = MockHttpResponse::new(200, &mock_response_body);
-        mock_client.expect_get(URL_PROFILE_STATUSES, mock_response);
-
-        weibo_api.profile_statuses_original(12345, 1).await.unwrap();
     }
 }
 
 #[cfg(test)]
 mod real_tests {
     use super::*;
-    use crate::{client, session::Session, weibo_api::WeiboAPIImpl};
+    use crate::{api_client::ApiClient, http_client, session::Session};
     use std::sync::{Arc, Mutex};
 
     #[tokio::test]
     async fn test_real_profile_statuses() {
         let session_file = "session.json";
         if let Ok(session) = Session::load(session_file) {
-            let client = client::Client::new().unwrap();
-            let weibo_api = WeiboAPIImpl::from_session(client, Arc::new(Mutex::new(session)));
-            let posts = weibo_api.profile_statuses(1401527553, 1).await.unwrap();
-            assert!(!posts.is_empty());
+            let client = http_client::Client::new().unwrap();
+            let weibo_api = ApiClient::from_session(client, Arc::new(Mutex::new(session)));
+            let _posts = weibo_api
+                .profile_statuses(1401527553, 1, ContainerType::Normal)
+                .await
+                .unwrap();
         }
     }
 }
