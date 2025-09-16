@@ -2,7 +2,7 @@
 use std::sync::Arc;
 
 use bytes::Bytes;
-use log::{debug, info, trace};
+use log::{debug, error, info, trace};
 use reqwest::{
     RequestBuilder,
     header::{self, HeaderMap, HeaderValue},
@@ -10,6 +10,7 @@ use reqwest::{
 pub use reqwest_cookie_store::CookieStore;
 use reqwest_cookie_store::CookieStoreMutex;
 use serde::{Serialize, de::DeserializeOwned};
+use url::{ParseError, Url};
 
 use crate::error::{Error, Result};
 
@@ -47,20 +48,46 @@ pub trait HttpClient: Send + Sync + Clone + 'static {
         form: &(impl Serialize + Send + Sync),
         retry_times: u8,
     ) -> Result<Self::Response>;
-    fn set_cookie(&mut self, cookie_store: CookieStore) -> Result<()>;
+    fn set_cookie(&self, cookie_store: CookieStore) -> Result<()>;
+}
+
+impl<C: HttpClient> HttpClient for Arc<C> {
+    type Response = C::Response;
+    async fn get(
+        &self,
+        url: &str,
+        query: &(impl Serialize + Send + Sync),
+        retry_times: u8,
+    ) -> Result<Self::Response> {
+        self.as_ref().get(url, query, retry_times).await
+    }
+    async fn post(
+        &self,
+        url: &str,
+        form: &(impl Serialize + Send + Sync),
+        retry_times: u8,
+    ) -> Result<Self::Response> {
+        self.as_ref().post(url, form, retry_times).await
+    }
+    fn set_cookie(&self, cookie_store: CookieStore) -> Result<()> {
+        self.as_ref().set_cookie(cookie_store)
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct Client {
     main_client: reqwest::Client,
-    web_client: Option<reqwest::Client>,
+    web_client: reqwest::Client,
+    cookie_store: Arc<CookieStoreMutex>,
 }
 
 impl Client {
     pub fn new() -> Result<Self> {
+        let cookie_store: Arc<CookieStoreMutex> = Default::default();
         Ok(Self {
             main_client: make_main_client()?,
-            web_client: None,
+            web_client: make_web_client(cookie_store.clone())?,
+            cookie_store,
         })
     }
 
@@ -68,8 +95,8 @@ impl Client {
         &self.main_client
     }
 
-    pub fn web_client(&self) -> Option<&reqwest::Client> {
-        self.web_client.as_ref()
+    pub fn web_client(&self) -> &reqwest::Client {
+        &self.web_client
     }
 
     async fn send_request(
@@ -121,7 +148,7 @@ fn make_main_client() -> Result<reqwest::Client> {
         .build()?)
 }
 
-fn make_web_client(cookie_store: CookieStore) -> Result<reqwest::Client> {
+fn make_web_client(cookie_store: Arc<CookieStoreMutex>) -> Result<reqwest::Client> {
     info!("Creating new http client with default headers");
     let headers = HeaderMap::from_iter([
         (
@@ -147,7 +174,7 @@ fn make_web_client(cookie_store: CookieStore) -> Result<reqwest::Client> {
     ]);
     Ok(reqwest::Client::builder()
         .default_headers(headers)
-        .cookie_provider(Arc::new(CookieStoreMutex::new(cookie_store)))
+        .cookie_provider(cookie_store)
         .build()?)
 }
 
@@ -166,7 +193,7 @@ impl HttpClient for Client {
         );
         let url = url::Url::parse(url).map_err(|e| Error::DataConversionError(format!("{e}")))?;
         let client = if url.domain() == Some("weibo.com") {
-            self.web_client.as_ref().ok_or(Error::NotLoggedIn)?
+            &self.web_client
         } else {
             &self.main_client
         };
@@ -188,7 +215,7 @@ impl HttpClient for Client {
         );
         let url = url::Url::parse(url).map_err(|e| Error::DataConversionError(format!("{e}")))?;
         let client = if url.domain() == Some("weibo.com") {
-            self.web_client.as_ref().ok_or(Error::NotLoggedIn)?
+            &self.web_client
         } else {
             &self.main_client
         };
@@ -196,8 +223,20 @@ impl HttpClient for Client {
         self.send_request(request_builder, retry_times).await
     }
 
-    fn set_cookie(&mut self, cookie_store: CookieStore) -> Result<()> {
-        self.web_client = Some(make_web_client(cookie_store)?);
+    fn set_cookie(&self, cookie_store: CookieStore) -> Result<()> {
+        let mut cookie_store_guard = self.cookie_store.lock().unwrap();
+        for cookie in cookie_store.iter_unexpired() {
+            let domain = cookie.domain().unwrap_or_default();
+            let path = cookie.path().unwrap_or("/");
+            let uri_str = format!("https://{}{}", domain, path);
+            let cookie_url: Url = uri_str
+                .parse()
+                .map_err(|e: ParseError| Error::DataConversionError(e.to_string()))?;
+            let _ = cookie_store_guard
+                .insert_raw(cookie, &cookie_url)
+                .map_err(|e| error!("cookie insert failed: {e}"));
+        }
+
         Ok(())
     }
 }

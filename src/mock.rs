@@ -176,7 +176,7 @@ impl HttpClient for MockClient {
         })
     }
 
-    fn set_cookie(&mut self, _cookie_store: reqwest_cookie_store::CookieStore) -> Result<()> {
+    fn set_cookie(&self, _cookie_store: reqwest_cookie_store::CookieStore) -> Result<()> {
         Ok(())
     }
 }
