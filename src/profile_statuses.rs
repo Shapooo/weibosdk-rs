@@ -40,7 +40,6 @@ impl<C: HttpClient> ApiClient<C> {
             "getting profile statuses, uid: {uid}, page: {page}, containerid: {container_type:?}"
         );
         let session = self.session()?;
-        let session = session.lock().unwrap().clone();
         let s = utils::generate_s(&session.uid, FROM);
         let mut params = utils::build_common_params();
         params["gsid"] = session.gsid.clone().into();
@@ -60,14 +59,13 @@ impl<C: HttpClient> ApiClient<C> {
 mod real_tests {
     use super::*;
     use crate::{api_client::ApiClient, http_client, session::Session};
-    use std::sync::{Arc, Mutex};
 
     #[tokio::test]
     async fn test_real_profile_statuses() {
         let session_file = "session.json";
         if let Ok(session) = Session::load(session_file) {
             let client = http_client::Client::new().unwrap();
-            let weibo_api = ApiClient::from_session(client, Arc::new(Mutex::new(session)));
+            let weibo_api = ApiClient::from_session(client, session);
             let _posts = weibo_api
                 .profile_statuses(1401527553, 1, ContainerType::Normal)
                 .await

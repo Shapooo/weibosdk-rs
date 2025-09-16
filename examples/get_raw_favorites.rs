@@ -1,5 +1,3 @@
-use std::sync::{Arc, Mutex};
-
 use simple_logger;
 use std::io::{self, Write};
 use weibosdk_rs::{ApiClient, session::Session};
@@ -10,14 +8,11 @@ async fn main() {
 
     let session_file = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("session.json");
     let client = weibosdk_rs::http_client::Client::new().unwrap();
-    let mut weibo_api = ApiClient::new(client, Default::default());
+    let weibo_api = ApiClient::new(client, Default::default());
 
     if let Ok(session) = Session::load(&session_file) {
         println!("Loaded session from {session_file:?}");
-        weibo_api
-            .login_with_session(Arc::new(Mutex::new(session)))
-            .await
-            .unwrap();
+        weibo_api.login_with_session(session).await.unwrap();
     } else {
         println!("No session file found. Starting new login.");
 
@@ -37,7 +32,7 @@ async fn main() {
     };
 
     let session = weibo_api.session().unwrap();
-    session.lock().unwrap().save(&session_file).unwrap();
+    session.save(&session_file).unwrap();
     println!("Session saved to {session_file:?}");
     let _favorites = weibo_api.favorites(1).await.unwrap();
 }

@@ -39,14 +39,13 @@ impl<C: HttpClient> ApiClient<C> {
 mod real_tests {
     use crate::{api_client::ApiClient, http_client, session::Session};
     use std::path::Path;
-    use std::sync::{Arc, Mutex};
 
     #[tokio::test]
     async fn test_real_web_emoticon() {
         let session_file = Path::new(env!("CARGO_MANIFEST_DIR")).join("session.json");
-        let session = Arc::new(Mutex::new(Session::load(session_file).unwrap()));
+        let session = Session::load(session_file).unwrap();
         let client = http_client::Client::new().unwrap();
-        let mut weibo_api = ApiClient::new(client, Default::default());
+        let weibo_api = ApiClient::new(client, Default::default());
         weibo_api.login_with_session(session).await.unwrap();
         let _emoji_map = weibo_api.fetch_from_web_api().await.unwrap();
     }
@@ -54,9 +53,9 @@ mod real_tests {
     #[tokio::test]
     async fn test_real_mobile_emoji() {
         let session_file = Path::new(env!("CARGO_MANIFEST_DIR")).join("session.json");
-        let session = Arc::new(Mutex::new(Session::load(session_file).unwrap()));
+        let session = Session::load(session_file).unwrap();
         let client = http_client::Client::new().unwrap();
-        let mut weibo_api = ApiClient::new(client, Default::default());
+        let weibo_api = ApiClient::new(client, Default::default());
         weibo_api.login_with_session(session).await.unwrap();
         let _emoji_map = weibo_api.fetch_from_mobile_api().await.unwrap();
     }

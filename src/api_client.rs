@@ -28,7 +28,7 @@ pub struct ErrResponse {
 pub struct ApiClient<C: HttpClient> {
     pub client: C,
     pub config: Conifg,
-    login_state: LoginState,
+    login_state: Arc<Mutex<LoginState>>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -39,7 +39,7 @@ pub enum LoginState {
         phone_number: String,
     },
     LoggedIn {
-        session: Arc<Mutex<Session>>,
+        session: Session,
     },
 }
 
@@ -67,28 +67,29 @@ impl<C: HttpClient> ApiClient<C> {
         }
     }
 
-    pub fn login_state(&self) -> &LoginState {
-        &self.login_state
+    pub fn login_state(&self) -> LoginState {
+        self.login_state
+            .lock()
+            .expect("lock login state failed")
+            .clone()
     }
 
     #[cfg(any(feature = "test-mocks", test))]
-    pub fn from_session(mut client: C, session: Arc<Mutex<Session>>) -> Self {
+    pub fn from_session(client: C, session: Session) -> Self {
         info!(
             "WeiboClient created from session for user {}",
-            session.lock().unwrap().screen_name
+            session.screen_name
         );
-        client
-            .set_cookie(session.lock().unwrap().cookie_store.clone())
-            .unwrap();
+        client.set_cookie(session.cookie_store.clone()).unwrap();
         ApiClient {
             client,
             config: Default::default(),
-            login_state: LoginState::LoggedIn { session },
+            login_state: Arc::new(Mutex::new(LoginState::LoggedIn { session })),
         }
     }
 
-    pub fn session(&self) -> Result<Arc<Mutex<Session>>> {
-        if let LoginState::LoggedIn { session } = self.login_state.clone() {
+    pub fn session(&self) -> Result<Session> {
+        if let LoginState::LoggedIn { session } = self.login_state() {
             Ok(session)
         } else {
             warn!("session() called before login");
@@ -96,9 +97,9 @@ impl<C: HttpClient> ApiClient<C> {
         }
     }
 
-    pub async fn get_sms_code(&mut self, phone_number: String) -> Result<()> {
+    pub async fn get_sms_code(&self, phone_number: String) -> Result<()> {
         info!("getting sms code for phone number: {phone_number}");
-        if !self.login_state.is_init() {
+        if !self.login_state().is_init() {
             warn!("get_sms_code called not in init state");
         }
 
@@ -116,7 +117,8 @@ impl<C: HttpClient> ApiClient<C> {
             .client
             .post(URL_SEND_CODE, &payload, self.config.retry_times)
             .await?;
-        self.login_state = LoginState::WaitingForCode { phone_number };
+        *self.login_state.lock().expect("login state lock failed") =
+            LoginState::WaitingForCode { phone_number };
 
         let send_code_response = response.json::<SendCodeResponse>().await?;
         match send_code_response {
@@ -131,9 +133,9 @@ impl<C: HttpClient> ApiClient<C> {
         }
     }
 
-    pub async fn login(&mut self, sms_code: &str) -> Result<()> {
+    pub async fn login(&self, sms_code: &str) -> Result<()> {
         info!("logging in with sms code");
-        if let LoginState::WaitingForCode { phone_number } = &self.login_state {
+        if let LoginState::WaitingForCode { phone_number } = self.login_state() {
             let payload = json!({
                 "c": PARAM_C,
                 "lang": LANG,
@@ -146,9 +148,7 @@ impl<C: HttpClient> ApiClient<C> {
             let session = execute_login(&self.client, &payload, self.config.retry_times).await?;
             info!("login success, user: {}", session.screen_name);
             self.client.set_cookie(session.cookie_store.clone())?;
-            self.login_state = LoginState::LoggedIn {
-                session: Arc::new(Mutex::new(session)),
-            };
+            *self.login_state.lock().unwrap() = LoginState::LoggedIn { session };
             Ok(())
         } else {
             error!("login called in invalid state");
@@ -156,23 +156,19 @@ impl<C: HttpClient> ApiClient<C> {
         }
     }
 
-    pub async fn login_with_session(&mut self, session: Arc<Mutex<Session>>) -> Result<()> {
-        let old_session = session.lock().unwrap().clone();
-        info!(
-            "logging in with session for user {}",
-            old_session.screen_name
-        );
-        if let LoginState::Init = self.login_state {
+    pub async fn login_with_session(&self, session: Session) -> Result<()> {
+        info!("logging in with session for user {}", session.screen_name);
+        if self.login_state().is_init() {
             let payload = json!({
                 "c": PARAM_C,
                 "lang": LANG,
                 "getuser": "1",
                 "getoauth": "1",
                 "getcookie": "1",
-                "gsid": &old_session.gsid,
-                "uid": &old_session.uid,
+                "gsid": &session.gsid,
+                "uid": &session.uid,
                 "from": SESSION_REFRESH_FROM,
-                "s": &crate::utils::generate_s(&old_session.uid, FROM),
+                "s": &crate::utils::generate_s(&session.uid, FROM),
             });
             let new_session =
                 execute_login(&self.client, &payload, self.config.retry_times).await?;
@@ -181,8 +177,9 @@ impl<C: HttpClient> ApiClient<C> {
                 new_session.screen_name
             );
             self.client.set_cookie(new_session.cookie_store.clone())?;
-            *session.lock().unwrap() = new_session;
-            self.login_state = LoginState::LoggedIn { session };
+            *self.login_state.lock().expect("login state lock failed") = LoginState::LoggedIn {
+                session: new_session,
+            };
             Ok(())
         } else {
             error!("login_with_session called in invalid state");
@@ -272,11 +269,11 @@ mod local_tests {
             MockHttpResponse::new(200, &send_code_response_json.to_string()),
         );
 
-        let mut weibo_api = ApiClient::new(mock_client.clone(), Default::default());
+        let weibo_api = ApiClient::new(mock_client.clone(), Default::default());
         weibo_api.get_sms_code(phone_number.clone()).await.unwrap();
 
         assert!(
-            matches!(weibo_api.login_state, LoginState::WaitingForCode { phone_number: num } if num == phone_number)
+            matches!(weibo_api.login_state(), LoginState::WaitingForCode { phone_number: num } if num == phone_number)
         );
     }
 
@@ -293,12 +290,12 @@ mod local_tests {
             MockHttpResponse::new(200, &login_response_json.to_string()),
         );
 
-        let mut weibo_api = ApiClient {
+        let weibo_api = ApiClient {
             config: Default::default(),
             client: mock_client.clone(),
-            login_state: LoginState::WaitingForCode {
+            login_state: Arc::new(Mutex::new(LoginState::WaitingForCode {
                 phone_number: phone_number.clone(),
-            },
+            })),
         };
 
         weibo_api.login(&sms_code).await.unwrap();
@@ -307,9 +304,8 @@ mod local_tests {
         let mock_uid = login_response_json["uid"].as_str().unwrap();
         let mock_screen_name = login_response_json["screen_name"].as_str().unwrap();
 
-        assert!(matches!(weibo_api.login_state, LoginState::LoggedIn { .. }));
+        assert!(weibo_api.login_state().is_logged_in());
         if let Ok(session) = weibo_api.session() {
-            let session = session.lock().unwrap();
             assert_eq!(session.gsid, mock_gsid);
             assert_eq!(session.uid, mock_uid);
             assert_eq!(session.screen_name, mock_screen_name);
@@ -327,8 +323,6 @@ mod local_tests {
             screen_name: "test_screen_name".to_string(),
             cookie_store: Default::default(),
         };
-        let old_session = Arc::new(Mutex::new(old_session));
-
         let login_response_json =
             serde_json::from_str::<serde_json::Value>(&create_login_json_str()).unwrap();
         mock_client.expect_post(
@@ -336,13 +330,12 @@ mod local_tests {
             MockHttpResponse::new(200, &login_response_json.to_string()),
         );
 
-        let mut weibo_api = ApiClient::new(mock_client.clone(), Default::default());
+        let weibo_api = ApiClient::new(mock_client.clone(), Default::default());
         weibo_api.login_with_session(old_session).await.unwrap();
 
-        assert!(matches!(weibo_api.login_state, LoginState::LoggedIn { .. }));
+        assert!(weibo_api.login_state().is_logged_in());
         let new_gsid = login_response_json["gsid"].as_str().unwrap();
         if let Ok(session) = weibo_api.session() {
-            let session = session.lock().unwrap();
             assert_eq!(session.gsid, new_gsid);
         } else {
             panic!("Login state should be LoggedIn");
