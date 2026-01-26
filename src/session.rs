@@ -3,6 +3,7 @@ use std::{fs, path::Path};
 use log::{debug, info};
 use reqwest_cookie_store::CookieStore;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::error::Result;
 
@@ -10,7 +11,7 @@ use crate::error::Result;
 pub struct Session {
     pub gsid: String,
     pub uid: String,
-    pub screen_name: String,
+    pub user: Value,
     pub cookie_store: CookieStore,
 }
 
@@ -20,8 +21,8 @@ impl Session {
         let content = fs::read_to_string(path)?;
         let session: Session = serde_json::from_str(&content)?;
         debug!(
-            "Session loaded successfully for user {}",
-            session.screen_name
+            "Session loaded successfully for user {:?}",
+            session.user["screen_name"]
         );
         Ok(session)
     }
@@ -30,7 +31,10 @@ impl Session {
         info!("Saving session to {:?}", path.as_ref());
         let content = serde_json::to_string_pretty(self)?;
         fs::write(path, content)?;
-        debug!("Session saved successfully for user {}", self.screen_name);
+        debug!(
+            "Session saved successfully for user {:?}",
+            self.user["screen_name"]
+        );
         Ok(())
     }
 }

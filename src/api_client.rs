@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 use log::{debug, error, info, warn};
 use reqwest_cookie_store::CookieStore;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{Value, json};
 
 use crate::{
     config::Conifg,
@@ -76,10 +76,7 @@ impl<C: HttpClient> ApiClient<C> {
 
     #[cfg(any(feature = "test-mocks", test))]
     pub fn from_session(client: C, session: Session) -> Self {
-        info!(
-            "WeiboClient created from session for user {}",
-            session.screen_name
-        );
+        info!("WeiboClient created from session for user {}", session.uid);
         client.set_cookie(session.cookie_store.clone()).unwrap();
         ApiClient {
             client,
@@ -146,7 +143,7 @@ impl<C: HttpClient> ApiClient<C> {
                 "smscode": sms_code,
             });
             let session = execute_login(&self.client, &payload, self.config.retry_times).await?;
-            info!("login success, user: {}", session.screen_name);
+            info!("login success, user: {}", session.uid);
             self.client.set_cookie(session.cookie_store.clone())?;
             *self.login_state.lock().unwrap() = LoginState::LoggedIn { session };
             Ok(())
@@ -157,7 +154,7 @@ impl<C: HttpClient> ApiClient<C> {
     }
 
     pub async fn login_with_session(&self, session: Session) -> Result<()> {
-        info!("logging in with session for user {}", session.screen_name);
+        info!("logging in with session for user {}", session.uid);
         if self.login_state().is_init() {
             let payload = json!({
                 "c": PARAM_C,
@@ -172,10 +169,7 @@ impl<C: HttpClient> ApiClient<C> {
             });
             let new_session =
                 execute_login(&self.client, &payload, self.config.retry_times).await?;
-            info!(
-                "login with session success, user: {}",
-                new_session.screen_name
-            );
+            info!("login with session success, user: {}", new_session.uid);
             self.client.set_cookie(new_session.cookie_store.clone())?;
             *self.login_state.lock().expect("login state lock failed") = LoginState::LoggedIn {
                 session: new_session,
@@ -206,7 +200,7 @@ enum LoginResponse {
 struct LoginSucc {
     pub gsid: String,
     pub uid: String,
-    pub screen_name: String,
+    pub user: Value,
     pub cookie: crate::cookie::Cookie,
 }
 
@@ -216,7 +210,7 @@ impl TryFrom<LoginSucc> for Session {
         Ok(Self {
             gsid: value.gsid,
             uid: value.uid,
-            screen_name: value.screen_name,
+            user: value.user,
             cookie_store: TryInto::<CookieStore>::try_into(value.cookie)?,
         })
     }
@@ -302,13 +296,11 @@ mod local_tests {
 
         let mock_gsid = login_response_json["gsid"].as_str().unwrap();
         let mock_uid = login_response_json["uid"].as_str().unwrap();
-        let mock_screen_name = login_response_json["screen_name"].as_str().unwrap();
 
         assert!(weibo_api.login_state().is_logged_in());
         if let Ok(session) = weibo_api.session() {
             assert_eq!(session.gsid, mock_gsid);
             assert_eq!(session.uid, mock_uid);
-            assert_eq!(session.screen_name, mock_screen_name);
         } else {
             panic!("Login state should be LoggedIn");
         }
@@ -320,7 +312,7 @@ mod local_tests {
         let old_session = Session {
             gsid: "old_gsid".to_string(),
             uid: "test_uid".to_string(),
-            screen_name: "test_screen_name".to_string(),
+            user: Value::Null,
             cookie_store: Default::default(),
         };
         let login_response_json =
