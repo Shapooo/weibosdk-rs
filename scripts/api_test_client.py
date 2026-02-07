@@ -39,8 +39,9 @@ class ApiTestClient:
             print("Could not proceed without a gsid.")
             return
 
-        payload["gsid"] = self.gsid
-        payload["s"] = generate_s(uid=uid, from_=payload["from"])
+        if payload:
+            payload["gsid"] = self.gsid
+            payload["s"] = generate_s(uid=uid, from_=payload["from"])
 
         try:
             if method.lower() == "get":

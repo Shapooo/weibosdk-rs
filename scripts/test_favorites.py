@@ -20,7 +20,7 @@ payload = {
 
 def main():
     client = ApiTestClient(session_file="../session.json")
-    client.run_test(URL, payload, method="get", output_filename="favorites.json")
+    client.run_test(URL, payload, method="get", output_filename="new_favorites.json")
 
 
 if __name__ == "__main__":
