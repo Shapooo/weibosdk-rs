@@ -8,8 +8,9 @@ use crate::{
     utils,
 };
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum ContainerType {
+    #[default]
     Normal,
     Original,
     Picture,
