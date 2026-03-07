@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use bytes::Bytes;
 use log::{debug, error, info, trace};
@@ -44,12 +44,14 @@ pub trait HttpClient: Send + Sync + Clone + 'static {
         url: &str,
         query: &(impl Serialize + Send + Sync),
         retry_times: u8,
+        timeout: Duration,
     ) -> Result<Self::Response>;
     async fn post(
         &self,
         url: &str,
         form: &(impl Serialize + Send + Sync),
         retry_times: u8,
+        timeout: Duration,
     ) -> Result<Self::Response>;
     fn set_cookie(&self, cookie_store: CookieStore) -> Result<()>;
 }
@@ -62,16 +64,18 @@ impl<C: HttpClient> HttpClient for Arc<C> {
         url: &str,
         query: &(impl Serialize + Send + Sync),
         retry_times: u8,
+        timeout: Duration,
     ) -> Result<Self::Response> {
-        self.as_ref().get(url, query, retry_times).await
+        self.as_ref().get(url, query, retry_times, timeout).await
     }
     async fn post(
         &self,
         url: &str,
         form: &(impl Serialize + Send + Sync),
         retry_times: u8,
+        timeout: Duration,
     ) -> Result<Self::Response> {
-        self.as_ref().post(url, form, retry_times).await
+        self.as_ref().post(url, form, retry_times, timeout).await
     }
     fn set_cookie(&self, cookie_store: CookieStore) -> Result<()> {
         self.as_ref().set_cookie(cookie_store)
@@ -107,10 +111,16 @@ impl Client {
         &self,
         request_builder: RequestBuilder,
         retry_times: u8,
+        timeout: Duration,
     ) -> Result<reqwest::Response> {
         let mut attempts = 0;
         loop {
-            let result = request_builder.try_clone().unwrap().send().await;
+            let result = request_builder
+                .try_clone()
+                .unwrap()
+                .timeout(timeout)
+                .send()
+                .await;
             match result {
                 Ok(response) => {
                     if response.status().is_success() {
@@ -190,6 +200,7 @@ impl HttpClient for Client {
         url: &str,
         query: &(impl Serialize + Send + Sync),
         retry_times: u8,
+        timeout: Duration,
     ) -> Result<Self::Response> {
         debug!("Sending GET request to {url}");
         trace!(
@@ -204,7 +215,8 @@ impl HttpClient for Client {
         };
 
         let request_builder = client.get(url).query(query);
-        self.send_request(request_builder, retry_times).await
+        self.send_request(request_builder, retry_times, timeout)
+            .await
     }
 
     async fn post(
@@ -212,6 +224,7 @@ impl HttpClient for Client {
         url: &str,
         form: &(impl Serialize + Send + Sync),
         retry_times: u8,
+        timeout: Duration,
     ) -> Result<Self::Response> {
         debug!("Sending POST request to {url}");
         trace!(
@@ -225,7 +238,8 @@ impl HttpClient for Client {
             &self.main_client
         };
         let request_builder = client.post(url).form(form);
-        self.send_request(request_builder, retry_times).await
+        self.send_request(request_builder, retry_times, timeout)
+            .await
     }
 
     fn set_cookie(&self, cookie_store: CookieStore) -> Result<()> {
@@ -277,7 +291,9 @@ mod local_tests {
 
         let client = Client::new().unwrap();
         let form = serde_json::json!({});
-        let response = HttpClient::post(&client, &uri, &form, 3).await.unwrap();
+        let response = HttpClient::post(&client, &uri, &form, 3, Duration::from_secs(30))
+            .await
+            .unwrap();
 
         let payload: TestPayload = response.json().await.unwrap();
         assert_eq!(payload, expected_response);

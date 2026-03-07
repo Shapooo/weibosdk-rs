@@ -112,7 +112,12 @@ impl<C: HttpClient> ApiClient<C> {
         });
         let response = self
             .client
-            .post(URL_SEND_CODE, &payload, self.config.retry_times)
+            .post(
+                URL_SEND_CODE,
+                &payload,
+                self.config.retry_times,
+                self.config.timeout,
+            )
             .await?;
         *self.login_state.lock().expect("login state lock failed") =
             LoginState::WaitingForCode { phone_number };
@@ -142,7 +147,13 @@ impl<C: HttpClient> ApiClient<C> {
                 "phone": phone_number,
                 "smscode": sms_code,
             });
-            let session = execute_login(&self.client, &payload, self.config.retry_times).await?;
+            let session = execute_login(
+                &self.client,
+                &payload,
+                self.config.retry_times,
+                self.config.timeout,
+            )
+            .await?;
             info!("login success, user: {}", session.uid);
             self.client.set_cookie(session.cookie_store.clone())?;
             *self.login_state.lock().unwrap() = LoginState::LoggedIn { session };
@@ -167,8 +178,13 @@ impl<C: HttpClient> ApiClient<C> {
                 "from": SESSION_REFRESH_FROM,
                 "s": &crate::utils::generate_s(&session.uid, FROM),
             });
-            let new_session =
-                execute_login(&self.client, &payload, self.config.retry_times).await?;
+            let new_session = execute_login(
+                &self.client,
+                &payload,
+                self.config.retry_times,
+                self.config.timeout,
+            )
+            .await?;
             info!("login with session success, user: {}", new_session.uid);
             self.client.set_cookie(new_session.cookie_store.clone())?;
             *self.login_state.lock().expect("login state lock failed") = LoginState::LoggedIn {
@@ -230,8 +246,11 @@ async fn execute_login<'a, C: HttpClient, P: Serialize + Send + Sync>(
     client: &'a C,
     payload: &'a P,
     retry_times: u8,
+    timeout: std::time::Duration,
 ) -> Result<Session> {
-    let response = client.post(URL_LOGIN, payload, retry_times).await?;
+    let response = client
+        .post(URL_LOGIN, payload, retry_times, timeout)
+        .await?;
 
     response.json::<LoginResponse>().await?.try_into()
 }

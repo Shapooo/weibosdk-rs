@@ -52,7 +52,12 @@ impl<C: HttpClient> ApiClient<C> {
         params["mix_media_enable"] = MIX_MEDIA_ENABLE.into();
         params["containerid"] = container_type.to_container_id(uid).into();
         self.client
-            .get(URL_PROFILE_STATUSES, &params, self.config.retry_times)
+            .get(
+                URL_PROFILE_STATUSES,
+                &params,
+                self.config.retry_times,
+                self.config.timeout,
+            )
             .await
     }
 }

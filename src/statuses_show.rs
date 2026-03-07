@@ -20,7 +20,12 @@ impl<C: HttpClient> ApiClient<C> {
         params["isGetLongText"] = 1.into();
 
         self.client
-            .get(URL_STATUSES_SHOW, &params, self.config.retry_times)
+            .get(
+                URL_STATUSES_SHOW,
+                &params,
+                self.config.retry_times,
+                self.config.timeout,
+            )
             .await
     }
 }

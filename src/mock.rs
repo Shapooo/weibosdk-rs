@@ -160,6 +160,7 @@ impl HttpClient for MockClient {
         url: &str,
         _query: &(impl Serialize + Send + Sync),
         _retry_times: u8,
+        _timeout: std::time::Duration,
     ) -> Result<Self::Response> {
         let responses = self.responses.lock().unwrap();
         responses.get(url).cloned().ok_or_else(|| {
@@ -172,6 +173,7 @@ impl HttpClient for MockClient {
         url: &str,
         _form: &(impl Serialize + Send + Sync),
         _retry_times: u8,
+        _timeout: std::time::Duration,
     ) -> Result<Self::Response> {
         let responses = self.responses.lock().unwrap();
         responses.get(url).cloned().ok_or_else(|| {
@@ -208,7 +210,10 @@ mod local_tests {
         mock_client.expect_post(test_url, MockHttpResponse::new(200, &expected_json));
 
         let form_data = serde_json::json!({ "key": "value" });
-        let response = mock_client.post(test_url, &form_data, 2).await.unwrap();
+        let response = mock_client
+            .post(test_url, &form_data, 2, std::time::Duration::from_secs(30))
+            .await
+            .unwrap();
 
         assert_eq!(response.status, 200);
         let received_data: TestData = response.json().await.unwrap();
@@ -221,7 +226,9 @@ mod local_tests {
         let test_url = "http://example.com/api/test_fail";
         let form_data = serde_json::json!({ "key": "value" });
 
-        let result = mock_client.post(test_url, &form_data, 2).await;
+        let result = mock_client
+            .post(test_url, &form_data, 2, std::time::Duration::from_secs(30))
+            .await;
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err().to_string(),
@@ -239,9 +246,15 @@ mod local_tests {
                 // Test from_str
                 client.$method_str(&expected_body);
                 let resp = if $is_get {
-                    client.get($url, &(), 0).await.unwrap()
+                    client
+                        .get($url, &(), 0, std::time::Duration::from_secs(0))
+                        .await
+                        .unwrap()
                 } else {
-                    client.post($url, &(), 0).await.unwrap()
+                    client
+                        .post($url, &(), 0, std::time::Duration::from_secs(0))
+                        .await
+                        .unwrap()
                 };
                 let body = resp.text().await.unwrap();
                 assert_eq!(body, expected_body);
@@ -251,9 +264,15 @@ mod local_tests {
                 write!(temp_file, "{}", &expected_body).unwrap();
                 client.$method_file(temp_file.path()).unwrap();
                 let resp = if $is_get {
-                    client.get($url, &(), 0).await.unwrap()
+                    client
+                        .get($url, &(), 0, std::time::Duration::from_secs(0))
+                        .await
+                        .unwrap()
                 } else {
-                    client.post($url, &(), 0).await.unwrap()
+                    client
+                        .post($url, &(), 0, std::time::Duration::from_secs(0))
+                        .await
+                        .unwrap()
                 };
                 let body = resp.text().await.unwrap();
                 assert_eq!(body, expected_body);

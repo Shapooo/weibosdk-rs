@@ -24,7 +24,12 @@ impl<C: HttpClient> ApiClient<C> {
         params["mix_media_enable"] = MIX_MEDIA_ENABLE.into();
 
         self.client
-            .get(URL_FAVORITES, &params, self.config.retry_times)
+            .get(
+                URL_FAVORITES,
+                &params,
+                self.config.retry_times,
+                self.config.timeout,
+            )
             .await
     }
 
@@ -38,7 +43,12 @@ impl<C: HttpClient> ApiClient<C> {
         params["id"] = id.into();
         let _ = self
             .client
-            .post(URL_FAVORITES_DESTROY, &params, self.config.retry_times)
+            .post(
+                URL_FAVORITES_DESTROY,
+                &params,
+                self.config.retry_times,
+                self.config.timeout,
+            )
             .await?;
         debug!("favorite {id} destroyed");
         Ok(())

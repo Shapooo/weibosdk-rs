@@ -14,7 +14,12 @@ impl<C: HttpClient> ApiClient<C> {
         let url = URL_WEB_EMOTICON;
         debug!("fetch emoticon, url: {url}");
         self.client
-            .get(url, &serde_json::json!({}), self.config.retry_times)
+            .get(
+                url,
+                &serde_json::json!({}),
+                self.config.retry_times,
+                self.config.timeout,
+            )
             .await
     }
 
@@ -30,7 +35,12 @@ impl<C: HttpClient> ApiClient<C> {
         });
 
         self.client
-            .get(URL_EMOJI_UPDATE, &params, self.config.retry_times)
+            .get(
+                URL_EMOJI_UPDATE,
+                &params,
+                self.config.retry_times,
+                self.config.timeout,
+            )
             .await
     }
 }
