@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use crate::{
-    config::Conifg,
+    config::Config,
     constants::{
         params::*,
         urls::{URL_LOGIN, URL_SEND_CODE},
@@ -27,7 +27,7 @@ pub struct ErrResponse {
 #[derive(Debug, Clone)]
 pub struct ApiClient<C: HttpClient> {
     pub client: C,
-    pub config: Conifg,
+    pub config: Config,
     login_state: Arc<Mutex<LoginState>>,
 }
 
@@ -58,7 +58,7 @@ impl LoginState {
 }
 
 impl<C: HttpClient> ApiClient<C> {
-    pub fn new(client: C, config: Conifg) -> Self {
+    pub fn new(client: C, config: Config) -> Self {
         info!("WeiboClient created");
         ApiClient {
             client,
