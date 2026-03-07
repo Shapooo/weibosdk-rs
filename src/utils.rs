@@ -61,13 +61,13 @@ mod local_tests {
     #[test]
     fn generate_s_test() {
         let from = "12DC195010";
-        assert_eq!(generate_s("1219658392".into(), from), "fb111111");
-        assert_eq!(generate_s("1054595560".into(), from), "23777777");
-        assert_eq!(generate_s("1229101630".into(), from), "37222222");
-        assert_eq!(generate_s("1494639172".into(), from), "77999999");
-        assert_eq!(generate_s("1568849308".into(), from), "7ceeeeee");
-        assert_eq!(generate_s("1927972896".into(), from), "92888888");
-        assert_eq!(generate_s("1683934114".into(), from), "b8888888");
-        assert_eq!(generate_s("1982981009".into(), from), "f5666666");
+        assert_eq!(generate_s("1219658392", from), "fb111111");
+        assert_eq!(generate_s("1054595560", from), "23777777");
+        assert_eq!(generate_s("1229101630", from), "37222222");
+        assert_eq!(generate_s("1494639172", from), "77999999");
+        assert_eq!(generate_s("1568849308", from), "7ceeeeee");
+        assert_eq!(generate_s("1927972896", from), "92888888");
+        assert_eq!(generate_s("1683934114", from), "b8888888");
+        assert_eq!(generate_s("1982981009", from), "f5666666");
     }
 }

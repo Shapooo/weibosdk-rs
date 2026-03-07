@@ -246,8 +246,7 @@ mod local_tests {
     fn create_login_json_str() -> String {
         let response_path =
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/login.json");
-        let res = std::fs::read_to_string(response_path).unwrap();
-        res
+        std::fs::read_to_string(response_path).unwrap()
     }
 
     #[tokio::test]

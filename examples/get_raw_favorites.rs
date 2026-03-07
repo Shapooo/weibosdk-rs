@@ -1,5 +1,5 @@
-use simple_logger;
 use std::io::{self, Write};
+
 use weibosdk_rs::{ApiClient, session::Session};
 
 #[tokio::main]

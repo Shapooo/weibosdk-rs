@@ -90,8 +90,7 @@ mod local_tests {
 
     fn make_login_response() -> String {
         let res_path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/data/login.json");
-        let login_res = std::fs::read_to_string(res_path).unwrap();
-        login_res
+        std::fs::read_to_string(res_path).unwrap()
     }
 
     #[test]
