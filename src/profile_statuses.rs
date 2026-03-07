@@ -36,6 +36,7 @@ impl<C: HttpClient> ApiClient<C> {
         uid: i64,
         page: u32,
         container_type: ContainerType,
+        count: u32,
     ) -> Result<C::Response> {
         info!(
             "getting profile statuses, uid: {uid}, page: {page}, containerid: {container_type:?}"
@@ -47,7 +48,7 @@ impl<C: HttpClient> ApiClient<C> {
         params["s"] = s.into();
         params["uid"] = uid.into();
         params["page"] = page.into();
-        params["count"] = self.config.status_count.into();
+        params["count"] = count.into();
         params["mix_media_enable"] = MIX_MEDIA_ENABLE.into();
         params["containerid"] = container_type.to_container_id(uid).into();
         self.client
@@ -68,7 +69,7 @@ mod real_tests {
             let client = http_client::Client::new().unwrap();
             let weibo_api = ApiClient::from_session(client, session);
             let _posts = weibo_api
-                .profile_statuses(1401527553, 1, ContainerType::Normal)
+                .profile_statuses(1401527553, 1, ContainerType::Normal, 20)
                 .await
                 .unwrap();
         }

@@ -12,7 +12,7 @@ use crate::{
 };
 
 impl<C: HttpClient> ApiClient<C> {
-    pub async fn favorites(&self, page: u32) -> Result<C::Response> {
+    pub async fn favorites(&self, page: u32, count: u32) -> Result<C::Response> {
         info!("getting favorites, page: {page}");
         let session = self.session()?;
         let s = utils::generate_s(&session.uid, FROM);
@@ -20,7 +20,7 @@ impl<C: HttpClient> ApiClient<C> {
         params["gsid"] = session.gsid.clone().into();
         params["s"] = s.into();
         params["page"] = page.into();
-        params["count"] = self.config.fav_count.into();
+        params["count"] = count.into();
         params["mix_media_enable"] = MIX_MEDIA_ENABLE.into();
 
         self.client
@@ -55,7 +55,7 @@ mod real_tests {
         if let Ok(session) = Session::load(session_file) {
             let client = http_client::Client::new().unwrap();
             let weibo_api = ApiClient::from_session(client, session);
-            let _ = weibo_api.favorites(1).await.unwrap();
+            let _ = weibo_api.favorites(1, 20).await.unwrap();
         }
     }
 }

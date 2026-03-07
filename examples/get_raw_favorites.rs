@@ -34,5 +34,5 @@ async fn main() {
     let session = weibo_api.session().unwrap();
     session.save(&session_file).unwrap();
     println!("Session saved to {session_file:?}");
-    let _favorites = weibo_api.favorites(1).await.unwrap();
+    let _favorites = weibo_api.favorites(1, 20).await.unwrap();
 }
