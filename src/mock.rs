@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use bytes::Bytes;
 use serde::{Serialize, de::DeserializeOwned};
 
@@ -30,6 +31,7 @@ impl MockHttpResponse {
     }
 }
 
+#[async_trait]
 impl HttpResponse for MockHttpResponse {
     async fn json<T: DeserializeOwned>(self) -> Result<T> {
         serde_json::from_slice(&self.body).map_err(Error::from)
@@ -149,6 +151,7 @@ impl MockClient {
     }
 }
 
+#[async_trait]
 impl HttpClient for MockClient {
     type Response = MockHttpResponse;
 

@@ -1,4 +1,4 @@
-#![allow(async_fn_in_trait)]
+use async_trait::async_trait;
 use std::sync::Arc;
 
 use bytes::Bytes;
@@ -14,12 +14,14 @@ use url::{ParseError, Url};
 
 use crate::error::{Error, Result};
 
+#[async_trait]
 pub trait HttpResponse: Send + Sync + 'static {
     async fn json<T: DeserializeOwned>(self) -> Result<T>;
     async fn text(self) -> Result<String>;
     async fn bytes(self) -> Result<Bytes>;
 }
 
+#[async_trait]
 impl HttpResponse for reqwest::Response {
     async fn json<T: DeserializeOwned>(self) -> Result<T> {
         Ok(self.json::<T>().await?)
@@ -34,6 +36,7 @@ impl HttpResponse for reqwest::Response {
     }
 }
 
+#[async_trait]
 pub trait HttpClient: Send + Sync + Clone + 'static {
     type Response: HttpResponse;
     async fn get(
@@ -51,6 +54,7 @@ pub trait HttpClient: Send + Sync + Clone + 'static {
     fn set_cookie(&self, cookie_store: CookieStore) -> Result<()>;
 }
 
+#[async_trait]
 impl<C: HttpClient> HttpClient for Arc<C> {
     type Response = C::Response;
     async fn get(
@@ -178,6 +182,7 @@ fn make_web_client(cookie_store: Arc<CookieStoreMutex>) -> Result<reqwest::Clien
         .build()?)
 }
 
+#[async_trait]
 impl HttpClient for Client {
     type Response = reqwest::Response;
     async fn get(
